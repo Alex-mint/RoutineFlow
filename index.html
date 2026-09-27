@@ -295,6 +295,40 @@
       transition: .2s ease;
     }
 
+    .habit-card.dragging {
+      opacity: .45;
+      border-color: var(--accent);
+    }
+
+    .habit-drag-handle,
+    .task-drag-handle {
+      width: 34px;
+      height: 40px;
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted-2);
+      cursor: grab;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      font-size: 20px;
+      line-height: 1;
+    }
+
+    .habit-drag-handle:hover,
+    .habit-drag-handle:focus-visible,
+    .task-drag-handle:hover,
+    .task-drag-handle:focus-visible {
+      color: var(--text);
+      background: rgba(255,255,255,.06);
+    }
+
+    .habit-drag-handle:active,
+    .task-drag-handle:active { cursor: grabbing; }
+
     .habit-card.done {
       border-color: rgba(82, 215, 164, .22);
       background: linear-gradient(180deg, rgba(82,215,164,.07), rgba(255,255,255,.02)), var(--card);
@@ -776,7 +810,9 @@
       return {
         version: 1,
         habits: [],
-        tasks: []
+        habitOrder: [],
+        tasks: [],
+        taskOrder: []
       };
     }
 
@@ -794,6 +830,17 @@
             ? [...new Set(h.completedDates.filter(isValidDateKey))].sort()
             : []
         }));
+        const habitIds = new Set(parsed.habits.map(habit => habit.id));
+        const savedOrder = Array.isArray(parsed.habitOrder)
+          ? [...new Set(parsed.habitOrder.filter(id => typeof id === "string" && habitIds.has(id)))]
+          : parsed.habits
+            .slice()
+            .sort((a, b) => Number(isDoneToday(a)) - Number(isDoneToday(b)) || a.name.localeCompare(b.name, "ru"))
+            .map(habit => habit.id);
+        parsed.habitOrder = [
+          ...savedOrder,
+          ...parsed.habits.filter(habit => !savedOrder.includes(habit.id)).map(habit => habit.id)
+        ];
         parsed.tasks = Array.isArray(parsed.tasks)
           ? parsed.tasks
             .filter(task => task && typeof task.name === "string" && isValidDateKey(task.date))
@@ -805,6 +852,19 @@
               completed: Boolean(task.completed)
             }))
           : [];
+        const taskIds = new Set(parsed.tasks.map(task => task.id));
+        const savedTaskOrder = Array.isArray(parsed.taskOrder)
+          ? [...new Set(parsed.taskOrder.filter(id => typeof id === "string" && taskIds.has(id)))]
+          : [
+            ...parsed.tasks
+              .filter(task => task.date === localDateKey())
+              .sort((a, b) => Number(isTaskDoneToday(a)) - Number(isTaskDoneToday(b)) || a.name.localeCompare(b.name, "ru")),
+            ...parsed.tasks.filter(task => task.date !== localDateKey())
+          ].map(task => task.id);
+        parsed.taskOrder = [
+          ...savedTaskOrder,
+          ...parsed.tasks.filter(task => !savedTaskOrder.includes(task.id)).map(task => task.id)
+        ];
         return parsed;
       } catch {
         return defaultState();
@@ -944,13 +1004,17 @@
         return;
       }
 
-      const sorted = [...tasks].sort((a, b) => Number(isTaskDoneToday(a)) - Number(isTaskDoneToday(b)) || a.name.localeCompare(b.name, "ru"));
-      for (const task of sorted) {
+      const orderedTasks = state.taskOrder
+        .map(id => tasks.find(task => task.id === id))
+        .filter(Boolean);
+      for (const task of orderedTasks) {
         const done = isTaskDoneToday(task);
         const card = document.createElement("article");
         card.className = `habit-card task-card${done ? " done" : ""}`;
+        card.dataset.taskId = task.id;
         card.innerHTML = `
           <div class="habit-top">
+            <button class="task-drag-handle" type="button" aria-label="Перетащить задачу «${escapeAttr(task.name)}»" title="Перетащить">⠿</button>
             <button class="check-btn" data-action="toggle-task" data-id="${escapeAttr(task.id)}" aria-label="${done ? "Снять отметку" : "Отметить выполненной"}">
               <span>${done ? "✓" : ""}</span>
             </button>
@@ -986,15 +1050,19 @@
         return;
       }
 
-      const sorted = [...state.habits].sort((a, b) => Number(isDoneToday(a)) - Number(isDoneToday(b)) || a.name.localeCompare(b.name, "ru"));
+      const orderedHabits = state.habitOrder
+        .map(id => state.habits.find(habit => habit.id === id))
+        .filter(Boolean);
 
-      for (const habit of sorted) {
+      for (const habit of orderedHabits) {
         const done = isDoneToday(habit);
         const streak = calculateStreak(habit);
         const card = document.createElement("article");
         card.className = `habit-card${done ? " done" : ""}`;
+        card.dataset.habitId = habit.id;
         card.innerHTML = `
           <div class="habit-top">
+            <button class="habit-drag-handle" type="button" aria-label="Перетащить привычку «${escapeAttr(habit.name)}»" title="Перетащить">⠿</button>
             <button class="check-btn" data-action="toggle" data-id="${escapeAttr(habit.id)}" aria-label="${done ? "Снять отметку" : "Отметить выполненной"}">
               <span>${done ? "✓" : ""}</span>
             </button>
@@ -1187,13 +1255,15 @@
           }
           showToast("Задача обновлена");
         } else {
-          state.tasks.push({
+          const task = {
             id: crypto.randomUUID(),
             name: name.slice(0, 80),
             color: selectedColor,
             date: localDateKey(),
             completed: false
-          });
+          };
+          state.tasks.push(task);
+          state.taskOrder.push(task.id);
           showToast("Задача добавлена");
         }
       } else if (editingHabitId) {
@@ -1210,6 +1280,7 @@
           color: selectedColor,
           completedDates: []
         });
+        state.habitOrder.push(state.habits[state.habits.length - 1].id);
         showToast("Привычка добавлена");
       }
 
@@ -1223,6 +1294,7 @@
       if (!task) return;
       if (!confirm(`Удалить задачу «${task.name}»?`)) return;
       state.tasks = state.tasks.filter(item => item.id !== id);
+      state.taskOrder = state.taskOrder.filter(taskId => taskId !== id);
       saveState();
       render();
       showToast("Задача удалена");
@@ -1234,6 +1306,7 @@
       const confirmed = confirm(`Удалить привычку «${habit.name}» и всю её историю?`);
       if (!confirmed) return;
       state.habits = state.habits.filter(h => h.id !== id);
+      state.habitOrder = state.habitOrder.filter(habitId => habitId !== id);
       saveState();
       render();
       showToast("Привычка удалена");
@@ -1275,12 +1348,48 @@
                 : []
             };
           });
+          const tasks = Array.isArray(parsed.tasks)
+            ? parsed.tasks
+              .filter(task => task && typeof task.name === "string" && isValidDateKey(task.date))
+              .map(task => ({
+                id: String(task.id || crypto.randomUUID()),
+                name: task.name.trim().slice(0, 80) || "Без названия",
+                color: COLORS.includes(task.color) ? task.color : COLORS[0],
+                date: task.date,
+                completed: Boolean(task.completed)
+              }))
+            : [];
+          const habitIds = new Set(habits.map(habit => habit.id));
+          const habitOrder = Array.isArray(parsed.habitOrder)
+            ? [...new Set(parsed.habitOrder.filter(id => typeof id === "string" && habitIds.has(id)))]
+            : habits
+              .slice()
+              .sort((a, b) => Number(isDoneToday(a)) - Number(isDoneToday(b)) || a.name.localeCompare(b.name, "ru"))
+              .map(habit => habit.id);
+          const taskIds = new Set(tasks.map(task => task.id));
+          const taskOrder = Array.isArray(parsed.taskOrder)
+            ? [...new Set(parsed.taskOrder.filter(id => typeof id === "string" && taskIds.has(id)))]
+            : [
+              ...tasks
+                .filter(task => task.date === localDateKey())
+                .sort((a, b) => Number(isTaskDoneToday(a)) - Number(isTaskDoneToday(b)) || a.name.localeCompare(b.name, "ru")),
+              ...tasks.filter(task => task.date !== localDateKey())
+            ].map(task => task.id);
 
           const confirmed = confirm("Импорт заменит текущие данные трекера. Продолжить?");
           if (!confirmed) return;
 
           state.version = 1;
           state.habits = habits;
+          state.habitOrder = [
+            ...habitOrder,
+            ...habits.filter(habit => !habitOrder.includes(habit.id)).map(habit => habit.id)
+          ];
+          state.tasks = tasks;
+          state.taskOrder = [
+            ...taskOrder,
+            ...tasks.filter(task => !taskOrder.includes(task.id)).map(task => task.id)
+          ];
           saveState();
           render();
           showToast("Данные импортированы");
@@ -1338,6 +1447,60 @@
       }
     });
 
+    function enableDragSort(listSelector, handleSelector, cardSelector, orderKey, idKey) {
+      const list = $(listSelector);
+      let draggedCard = null;
+      let dragPointerId = null;
+
+      list.addEventListener("pointerdown", event => {
+        const handle = event.target.closest(handleSelector);
+        if (!handle || !event.isPrimary || event.button !== 0) return;
+        draggedCard = handle.closest(cardSelector);
+        if (!draggedCard) return;
+        dragPointerId = event.pointerId;
+        draggedCard.classList.add("dragging");
+        event.preventDefault();
+      });
+
+      document.addEventListener("pointermove", event => {
+        if (!draggedCard || event.pointerId !== dragPointerId) return;
+        const target = document.elementFromPoint(event.clientX, event.clientY)
+          ?.closest(cardSelector);
+        if (!target || target === draggedCard || target.parentElement !== list) return;
+
+        const rect = target.getBoundingClientRect();
+        const columnCount = getComputedStyle(list).gridTemplateColumns.split(" ").length;
+        const insertAfter = columnCount === 1
+          ? event.clientY >= rect.top + rect.height / 2
+          : event.clientY >= rect.top && event.clientY <= rect.bottom
+            ? event.clientX >= rect.left + rect.width / 2
+            : event.clientY >= rect.top + rect.height / 2;
+        list.insertBefore(draggedCard, insertAfter ? target.nextSibling : target);
+      });
+
+      function finishDrag(event) {
+        if (!draggedCard || event.pointerId !== dragPointerId) return;
+        draggedCard.classList.remove("dragging");
+        const newOrder = [...list.querySelectorAll(cardSelector)].map(card => card.dataset[idKey]);
+        const orderChanged = newOrder.some((id, index) => id !== state[orderKey][index]);
+        draggedCard = null;
+        dragPointerId = null;
+        if (orderChanged) {
+          state[orderKey] = [
+            ...newOrder,
+            ...state[orderKey].filter(id => !newOrder.includes(id))
+          ];
+          saveState();
+        }
+      }
+
+      document.addEventListener("pointerup", finishDrag);
+      document.addEventListener("pointercancel", finishDrag);
+    }
+
+    enableDragSort("#habitList", ".habit-drag-handle", ".habit-card[data-habit-id]", "habitOrder", "habitId");
+    enableDragSort("#taskList", ".task-drag-handle", ".habit-card[data-task-id]", "taskOrder", "taskId");
+
     $("#calendarMeta").addEventListener("click", event => {
       if (!event.target.closest('[data-action="all-activity"]')) return;
       selectedActivityHabitId = null;
@@ -1357,7 +1520,9 @@
       const confirmed = confirm("Удалить все привычки и всю историю? Это действие нельзя отменить без резервной копии.");
       if (!confirmed) return;
       state.habits = [];
+      state.habitOrder = [];
       state.tasks = [];
+      state.taskOrder = [];
       saveState();
       render();
       closeSettings();
@@ -1381,6 +1546,9 @@
       const fresh = loadState();
       state.version = fresh.version;
       state.habits = fresh.habits;
+      state.habitOrder = fresh.habitOrder;
+      state.tasks = fresh.tasks;
+      state.taskOrder = fresh.taskOrder;
       render();
     });
 
