@@ -232,11 +232,11 @@
     .primary-btn:hover { filter: brightness(1.06); transform: translateY(-1px); }
     .secondary-btn {
       color: var(--text);
-      background: rgba(255,255,255,.04);
+      background: rgba(13, 148, 136, 1);
       border: 1px solid var(--border);
     }
 
-    .secondary-btn:hover { background: rgba(255,255,255,.07); }
+    .secondary-btn:hover { background: rgba(13, 184, 169); }
 
     .section {
       border-radius: var(--radius);
@@ -273,6 +273,14 @@
       background: linear-gradient(180deg, rgba(82,215,164,.07), rgba(255,255,255,.02)), var(--card);
     }
 
+    .task-card {
+      border-left: 3px solid var(--accent);
+    }
+
+    .task-card.done {
+      border-left-color: var(--success);
+    }
+
     .habit-top {
       display: flex;
       align-items: center;
@@ -286,7 +294,7 @@
 
     .habit-name {
       margin: 0;
-      font-size: 28px;
+      font-size: 24px;
       font-weight: 700;
       overflow-wrap: anywhere;
     }
@@ -614,7 +622,16 @@
 
     <div class="toolbar">
       <button class="primary-btn" id="addHabitBtn">＋ Добавить привычку</button>
+      <button class="secondary-btn" id="addTaskBtn">＋ Задача на сегодня</button>
     </div>
+
+    <section class="section">
+      <div class="section-header">
+        <h3 class="section-title">Задачи на сегодня</h3>
+        <div class="section-meta" id="taskCountLabel">0 задач</div>
+      </div>
+      <div class="habit-list" id="taskList"></div>
+    </section>
 
     <section class="section">
       <div class="section-header">
@@ -708,6 +725,8 @@
 
     const state = loadState();
     let editingHabitId = null;
+    let editingTaskId = null;
+    let modalType = "habit";
     let selectedColor = COLORS[0];
     let toastTimer = null;
 
@@ -716,7 +735,8 @@
     function defaultState() {
       return {
         version: 1,
-        habits: []
+        habits: [],
+        tasks: []
       };
     }
 
@@ -734,6 +754,17 @@
             ? [...new Set(h.completedDates.filter(isValidDateKey))].sort()
             : []
         }));
+        parsed.tasks = Array.isArray(parsed.tasks)
+          ? parsed.tasks
+            .filter(task => task && typeof task.name === "string" && isValidDateKey(task.date))
+            .map(task => ({
+              id: String(task.id || crypto.randomUUID()),
+              name: task.name.trim().slice(0, 80) || "Без названия",
+              color: COLORS.includes(task.color) ? task.color : COLORS[0],
+              date: task.date,
+              completed: Boolean(task.completed)
+            }))
+          : [];
         return parsed;
       } catch {
         return defaultState();
@@ -785,6 +816,14 @@
       return habit.completedDates.includes(localDateKey());
     }
 
+    function tasksForToday() {
+      return state.tasks.filter(task => task.date === localDateKey());
+    }
+
+    function isTaskDoneToday(task) {
+      return task.date === localDateKey() && task.completed;
+    }
+
     function calculateStreak(habit) {
       let cursor = new Date();
       if (!habit.completedDates.includes(localDateKey(cursor))) {
@@ -812,25 +851,73 @@
     function render() {
       const today = localDateKey();
       const completedToday = state.habits.filter(isDoneToday).length;
-      const total = state.habits.length;
-      const percentage = total ? Math.round((completedToday / total) * 100) : 0;
+      const todayTasks = tasksForToday();
+      const completedTasksToday = todayTasks.filter(isTaskDoneToday).length;
+      const total = state.habits.length + todayTasks.length;
+      const completedTotal = completedToday + completedTasksToday;
+      const percentage = total ? Math.round((completedTotal / total) * 100) : 0;
 
       $("#dateTitle").textContent = formatDateLong(new Date());
-      $("#todayCount").textContent = `${completedToday} / ${total}`;
+      $("#todayCount").textContent = `${completedTotal} / ${total}`;
       $("#progressLabel").textContent = `${percentage}%`;
       $("#progressFill").style.width = `${percentage}%`;
-      $("#habitCountLabel").textContent = `${total} ${pluralize(total, ["привычка", "привычки", "привычек"])}`;
+      $("#habitCountLabel").textContent = `${state.habits.length} ${pluralize(state.habits.length, ["привычка", "привычки", "привычек"])}`;
+      $("#taskCountLabel").textContent = `${todayTasks.length} ${pluralize(todayTasks.length, ["задача", "задачи", "задач"])}`;
 
       if (!total) {
-        $("#statCaption").textContent = "Добавь первую привычку";
+        $("#statCaption").textContent = "Добавь привычку или задачу";
       } else if (percentage === 100) {
-        $("#statCaption").textContent = "Все привычки выполнены 🎉";
+        $("#statCaption").textContent = "Всё на сегодня выполнено 🎉";
       } else {
-        $("#statCaption").textContent = `Осталось выполнить: ${total - completedToday}`;
+        $("#statCaption").textContent = `Осталось выполнить: ${total - completedTotal}`;
       }
 
+      renderTasks();
       renderHabits();
       renderCalendar();
+    }
+
+    function renderTasks() {
+      const container = $("#taskList");
+      const tasks = tasksForToday();
+      container.innerHTML = "";
+
+      if (!tasks.length) {
+        container.innerHTML = `
+          <div class="empty" style="grid-column:1/-1">
+            <div class="empty-icon">📝</div>
+            <h3>На сегодня задач нет</h3>
+            <p>Добавь разовое дело — оно не станет привычкой и не повторится завтра.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const sorted = [...tasks].sort((a, b) => Number(isTaskDoneToday(a)) - Number(isTaskDoneToday(b)) || a.name.localeCompare(b.name, "ru"));
+      for (const task of sorted) {
+        const done = isTaskDoneToday(task);
+        const card = document.createElement("article");
+        card.className = `habit-card task-card${done ? " done" : ""}`;
+        card.innerHTML = `
+          <div class="habit-top">
+            <button class="check-btn" data-action="toggle-task" data-id="${escapeAttr(task.id)}" aria-label="${done ? "Снять отметку" : "Отметить выполненной"}">
+              <span>${done ? "✓" : ""}</span>
+            </button>
+            <div class="habit-main">
+              <h3 class="habit-name" style="color:${task.color}">${escapeHtml(task.name)}</h3>
+              <p class="habit-sub">${done ? "Сегодня выполнено" : "Разовая задача на сегодня"}</p>
+            </div>
+          </div>
+          <div class="habit-footer">
+            <div class="streak">${done ? "✓ Выполнено" : "○ Ожидает выполнения"}</div>
+            <div class="mini-actions">
+              <button class="mini-btn" data-action="edit-task" data-id="${escapeAttr(task.id)}">Изменить</button>
+              <button class="mini-btn danger" data-action="delete-task" data-id="${escapeAttr(task.id)}">Удалить</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      }
     }
 
     function renderHabits() {
@@ -949,8 +1036,19 @@
       render();
     }
 
+    function toggleTask(id) {
+      const task = state.tasks.find(item => item.id === id && item.date === localDateKey());
+      if (!task) return;
+      task.completed = !task.completed;
+      saveState();
+      render();
+      showToast(task.completed ? "Задача выполнена ✓" : "Отметка снята");
+    }
+
     function openHabitModal(id = null) {
       editingHabitId = id;
+      editingTaskId = null;
+      modalType = "habit";
       const habit = id ? state.habits.find(h => h.id === id) : null;
       $("#modalTitle").textContent = habit ? "Изменить привычку" : "Новая привычка";
       $("#habitName").value = habit?.name || "";
@@ -961,10 +1059,28 @@
       setTimeout(() => $("#habitName").focus(), 50);
     }
 
+    function openTaskModal(id = null) {
+      editingTaskId = id;
+      editingHabitId = null;
+      modalType = "task";
+      const task = id ? state.tasks.find(item => item.id === id && item.date === localDateKey()) : null;
+      $("#modalTitle").textContent = task ? "Изменить задачу" : "Новая задача на сегодня";
+      $("#habitName").value = task?.name || "";
+      $("#habitName").placeholder = "Например, Купить продукты";
+      selectedColor = task?.color || COLORS[0];
+      renderColorPicker();
+      $("#habitModal").classList.add("open");
+      $("#habitModal").setAttribute("aria-hidden", "false");
+      setTimeout(() => $("#habitName").focus(), 50);
+    }
+
     function closeHabitModal() {
       $("#habitModal").classList.remove("open");
       $("#habitModal").setAttribute("aria-hidden", "true");
       editingHabitId = null;
+      editingTaskId = null;
+      modalType = "habit";
+      $("#habitName").placeholder = "Например, Читать 20 минут";
     }
 
     function renderColorPicker() {
@@ -987,12 +1103,30 @@
     function saveHabitFromModal() {
       const name = $("#habitName").value.trim();
       if (!name) {
-        showToast("Введите название привычки");
+        showToast(`Введите название ${modalType === "task" ? "задачи" : "привычки"}`);
         $("#habitName").focus();
         return;
       }
 
-      if (editingHabitId) {
+      if (modalType === "task") {
+        if (editingTaskId) {
+          const task = state.tasks.find(item => item.id === editingTaskId && item.date === localDateKey());
+          if (task) {
+            task.name = name.slice(0, 80);
+            task.color = selectedColor;
+          }
+          showToast("Задача обновлена");
+        } else {
+          state.tasks.push({
+            id: crypto.randomUUID(),
+            name: name.slice(0, 80),
+            color: selectedColor,
+            date: localDateKey(),
+            completed: false
+          });
+          showToast("Задача добавлена");
+        }
+      } else if (editingHabitId) {
         const habit = state.habits.find(h => h.id === editingHabitId);
         if (habit) {
           habit.name = name.slice(0, 80);
@@ -1012,6 +1146,16 @@
       saveState();
       closeHabitModal();
       render();
+    }
+
+    function deleteTask(id) {
+      const task = state.tasks.find(item => item.id === id && item.date === localDateKey());
+      if (!task) return;
+      if (!confirm(`Удалить задачу «${task.name}»?`)) return;
+      state.tasks = state.tasks.filter(item => item.id !== id);
+      saveState();
+      render();
+      showToast("Задача удалена");
     }
 
     function deleteHabit(id) {
@@ -1096,6 +1240,7 @@
     }
 
     $("#addHabitBtn").addEventListener("click", () => openHabitModal());
+    $("#addTaskBtn").addEventListener("click", () => openTaskModal());
     $("#closeModalBtn").addEventListener("click", closeHabitModal);
     $("#cancelModalBtn").addEventListener("click", closeHabitModal);
     $("#saveHabitBtn").addEventListener("click", saveHabitFromModal);
@@ -1118,10 +1263,20 @@
       if (action === "delete") deleteHabit(id);
     });
 
+    $("#taskList").addEventListener("click", event => {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const { action, id } = button.dataset;
+      if (action === "toggle-task") toggleTask(id);
+      if (action === "edit-task") openTaskModal(id);
+      if (action === "delete-task") deleteTask(id);
+    });
+
     $("#resetBtn").addEventListener("click", () => {
       const confirmed = confirm("Удалить все привычки и всю историю? Это действие нельзя отменить без резервной копии.");
       if (!confirmed) return;
       state.habits = [];
+      state.tasks = [];
       saveState();
       render();
       closeSettings();
