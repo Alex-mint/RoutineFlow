@@ -160,15 +160,31 @@
     }
 
     .progress-row {
-      display: flex;
-      align-items: center;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
       gap: 12px;
       margin-top: 20px;
     }
 
+    .progress-item { min-width: 0; }
+
+    .progress-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 7px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .progress-item-count {
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
     .progress-track {
       height: 10px;
-      flex: 1;
       border-radius: 99px;
       background: rgba(255,255,255,.07);
       overflow: hidden;
@@ -182,12 +198,12 @@
       transition: width .35s ease;
     }
 
-    .progress-label {
-      min-width: 42px;
-      text-align: right;
-      color: var(--muted);
-      font-size: 13px;
-      font-variant-numeric: tabular-nums;
+    .habit-progress-fill {
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    }
+
+    .task-progress-fill {
+      background: linear-gradient(90deg, #0d9488, var(--success));
     }
 
     .hero-stat {
@@ -199,7 +215,16 @@
     }
 
     .stat-label { color: var(--muted); font-size: 12px; }
-    .stat-value { margin-top: 5px; font-size: 34px; font-weight: 760; letter-spacing: -.04em; }
+    .stat-breakdown { display: grid; gap: 8px; margin-top: 8px; }
+    .stat-line {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .stat-line-label { color: var(--muted); }
+    .stat-value { font-size: 20px; font-weight: 760; font-variant-numeric: tabular-nums; }
     .stat-caption { color: var(--muted-2); font-size: 12px; }
 
     .toolbar {
@@ -606,15 +631,40 @@
           <h2 class="date-title" id="dateTitle">—</h2>
         </div>
         <div class="progress-row">
-          <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
-          <div class="progress-label" id="progressLabel">0%</div>
+          <div class="progress-item">
+            <div class="progress-item-header">
+              <span>Привычки</span>
+              <span class="progress-item-count" id="habitProgressLabel">0 / 0</span>
+            </div>
+            <div class="progress-track" role="progressbar" aria-label="Привычки выполнены сегодня" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" id="habitProgressTrack">
+              <div class="progress-fill habit-progress-fill" id="habitProgressFill"></div>
+            </div>
+          </div>
+          <div class="progress-item">
+            <div class="progress-item-header">
+              <span>Задачи</span>
+              <span class="progress-item-count" id="taskProgressLabel">0 / 0</span>
+            </div>
+            <div class="progress-track" role="progressbar" aria-label="Задачи выполнены сегодня" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" id="taskProgressTrack">
+              <div class="progress-fill task-progress-fill" id="taskProgressFill"></div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="hero-stat">
         <div>
           <div class="stat-label">Выполнено сегодня</div>
-          <div class="stat-value" id="todayCount">0 / 0</div>
+          <div class="stat-breakdown">
+            <div class="stat-line">
+              <span class="stat-line-label">Привычки</span>
+              <span class="stat-value" id="todayHabitCount">0 / 0</span>
+            </div>
+            <div class="stat-line">
+              <span class="stat-line-label">Задачи</span>
+              <span class="stat-value" id="todayTaskCount">0 / 0</span>
+            </div>
+          </div>
         </div>
         <div class="stat-caption" id="statCaption">Добавь первую привычку</div>
       </div>
@@ -856,11 +906,24 @@
       const total = state.habits.length + todayTasks.length;
       const completedTotal = completedToday + completedTasksToday;
       const percentage = total ? Math.round((completedTotal / total) * 100) : 0;
+      const habitPercentage = state.habits.length
+        ? Math.round((completedToday / state.habits.length) * 100)
+        : 0;
+      const taskPercentage = todayTasks.length
+        ? Math.round((completedTasksToday / todayTasks.length) * 100)
+        : 0;
 
       $("#dateTitle").textContent = formatDateLong(new Date());
-      $("#todayCount").textContent = `${completedTotal} / ${total}`;
-      $("#progressLabel").textContent = `${percentage}%`;
-      $("#progressFill").style.width = `${percentage}%`;
+      $("#todayHabitCount").textContent = `${completedToday} / ${state.habits.length}`;
+      $("#todayTaskCount").textContent = `${completedTasksToday} / ${todayTasks.length}`;
+      $("#habitProgressLabel").textContent = `${completedToday} / ${state.habits.length}`;
+      $("#habitProgressFill").style.width = `${habitPercentage}%`;
+      $("#habitProgressTrack").setAttribute("aria-valuemax", Math.max(state.habits.length, 1));
+      $("#habitProgressTrack").setAttribute("aria-valuenow", completedToday);
+      $("#taskProgressLabel").textContent = `${completedTasksToday} / ${todayTasks.length}`;
+      $("#taskProgressFill").style.width = `${taskPercentage}%`;
+      $("#taskProgressTrack").setAttribute("aria-valuemax", Math.max(todayTasks.length, 1));
+      $("#taskProgressTrack").setAttribute("aria-valuenow", completedTasksToday);
       $("#habitCountLabel").textContent = `${state.habits.length} ${pluralize(state.habits.length, ["привычка", "привычки", "привычек"])}`;
       $("#taskCountLabel").textContent = `${todayTasks.length} ${pluralize(todayTasks.length, ["задача", "задачи", "задач"])}`;
 
@@ -869,7 +932,9 @@
       } else if (percentage === 100) {
         $("#statCaption").textContent = "Всё на сегодня выполнено 🎉";
       } else {
-        $("#statCaption").textContent = `Осталось выполнить: ${total - completedTotal}`;
+        const remainingHabits = state.habits.length - completedToday;
+        const remainingTasks = todayTasks.length - completedTasksToday;
+        $("#statCaption").textContent = `Осталось: привычек — ${remainingHabits}, задач — ${remainingTasks}`;
       }
 
       renderTasks();
