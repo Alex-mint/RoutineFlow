@@ -159,32 +159,27 @@
       line-height: 1.05;
     }
 
-    .progress-row {
+    .progress-list {
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 12px;
+      gap: 10px;
       margin-top: 20px;
     }
 
-    .progress-item { min-width: 0; }
-
-    .progress-item-header {
+    .progress-row {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-      margin-bottom: 7px;
-      color: var(--muted);
-      font-size: 11px;
+      gap: 12px;
     }
 
-    .progress-item-count {
-      font-variant-numeric: tabular-nums;
-      white-space: nowrap;
+    .progress-name {
+      width: 68px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .progress-track {
       height: 10px;
+      flex: 1;
       border-radius: 99px;
       background: rgba(255,255,255,.07);
       overflow: hidden;
@@ -198,12 +193,12 @@
       transition: width .35s ease;
     }
 
-    .habit-progress-fill {
-      background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    }
-
-    .task-progress-fill {
-      background: linear-gradient(90deg, #0d9488, var(--success));
+    .progress-label {
+      min-width: 42px;
+      text-align: right;
+      color: var(--muted);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
     }
 
     .hero-stat {
@@ -212,19 +207,11 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      gap: 12px;
     }
 
     .stat-label { color: var(--muted); font-size: 12px; }
-    .stat-breakdown { display: grid; gap: 8px; margin-top: 8px; }
-    .stat-line {
-      display: flex;
-      align-items: baseline;
-      justify-content: space-between;
-      gap: 12px;
-      font-size: 13px;
-    }
-    .stat-line-label { color: var(--muted); }
-    .stat-value { font-size: 20px; font-weight: 760; font-variant-numeric: tabular-nums; }
+    .stat-value { margin-top: 3px; font-size: 28px; font-weight: 760; letter-spacing: -.04em; }
     .stat-caption { color: var(--muted-2); font-size: 12px; }
 
     .toolbar {
@@ -284,6 +271,21 @@
     }
 
     .section-meta { color: var(--muted); font-size: 12px; }
+
+    .calendar-meta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+      text-align: right;
+    }
+
+    .calendar-reset {
+      padding: 5px 7px;
+      color: var(--accent);
+      white-space: nowrap;
+    }
 
     .habit-list { display: grid; gap: 10px; }
 
@@ -630,43 +632,30 @@
           <div class="eyebrow">Сегодня</div>
           <h2 class="date-title" id="dateTitle">—</h2>
         </div>
-        <div class="progress-row">
-          <div class="progress-item">
-            <div class="progress-item-header">
-              <span>Привычки</span>
-              <span class="progress-item-count" id="habitProgressLabel">0 / 0</span>
-            </div>
-            <div class="progress-track" role="progressbar" aria-label="Привычки выполнены сегодня" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" id="habitProgressTrack">
-              <div class="progress-fill habit-progress-fill" id="habitProgressFill"></div>
-            </div>
+        <div class="progress-list">
+          <div class="progress-row">
+            <div class="progress-name">Привычки</div>
+            <div class="progress-track"><div class="progress-fill" id="habitProgressFill"></div></div>
+            <div class="progress-label" id="habitProgressLabel">0%</div>
           </div>
-          <div class="progress-item">
-            <div class="progress-item-header">
-              <span>Задачи</span>
-              <span class="progress-item-count" id="taskProgressLabel">0 / 0</span>
-            </div>
-            <div class="progress-track" role="progressbar" aria-label="Задачи выполнены сегодня" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" id="taskProgressTrack">
-              <div class="progress-fill task-progress-fill" id="taskProgressFill"></div>
-            </div>
+          <div class="progress-row">
+            <div class="progress-name">Задачи</div>
+            <div class="progress-track"><div class="progress-fill" id="taskProgressFill"></div></div>
+            <div class="progress-label" id="taskProgressLabel">0%</div>
           </div>
         </div>
       </div>
 
       <div class="hero-stat">
         <div>
-          <div class="stat-label">Выполнено сегодня</div>
-          <div class="stat-breakdown">
-            <div class="stat-line">
-              <span class="stat-line-label">Привычки</span>
-              <span class="stat-value" id="todayHabitCount">0 / 0</span>
-            </div>
-            <div class="stat-line">
-              <span class="stat-line-label">Задачи</span>
-              <span class="stat-value" id="todayTaskCount">0 / 0</span>
-            </div>
-          </div>
+          <div class="stat-label">Привычки выполнены</div>
+          <div class="stat-value" id="habitTodayCount">0 / 0</div>
         </div>
-        <div class="stat-caption" id="statCaption">Добавь первую привычку</div>
+        <div>
+          <div class="stat-label">Задачи выполнены</div>
+          <div class="stat-value" id="taskTodayCount">0 / 0</div>
+        </div>
+        <div class="stat-caption" id="statCaption">Отметки считаются отдельно</div>
       </div>
     </section>
 
@@ -691,10 +680,10 @@
       <div class="habit-list" id="habitList"></div>
     </section>
 
-    <section class="section">
+    <section class="section" id="activitySection">
       <div class="section-header">
         <h3 class="section-title">Последние 30 дней</h3>
-        <div class="section-meta">Общая активность</div>
+        <div class="section-meta calendar-meta" id="calendarMeta">Общая активность</div>
       </div>
       <div class="calendar-wrap">
         <div class="weekday-row" aria-hidden="true">
@@ -778,6 +767,7 @@
     let editingTaskId = null;
     let modalType = "habit";
     let selectedColor = COLORS[0];
+    let selectedActivityHabitId = null;
     let toastTimer = null;
 
     const $ = (selector) => document.querySelector(selector);
@@ -903,9 +893,6 @@
       const completedToday = state.habits.filter(isDoneToday).length;
       const todayTasks = tasksForToday();
       const completedTasksToday = todayTasks.filter(isTaskDoneToday).length;
-      const total = state.habits.length + todayTasks.length;
-      const completedTotal = completedToday + completedTasksToday;
-      const percentage = total ? Math.round((completedTotal / total) * 100) : 0;
       const habitPercentage = state.habits.length
         ? Math.round((completedToday / state.habits.length) * 100)
         : 0;
@@ -914,27 +901,26 @@
         : 0;
 
       $("#dateTitle").textContent = formatDateLong(new Date());
-      $("#todayHabitCount").textContent = `${completedToday} / ${state.habits.length}`;
-      $("#todayTaskCount").textContent = `${completedTasksToday} / ${todayTasks.length}`;
-      $("#habitProgressLabel").textContent = `${completedToday} / ${state.habits.length}`;
+      $("#habitTodayCount").textContent = `${completedToday} / ${state.habits.length}`;
+      $("#taskTodayCount").textContent = `${completedTasksToday} / ${todayTasks.length}`;
+      $("#habitProgressLabel").textContent = `${habitPercentage}%`;
       $("#habitProgressFill").style.width = `${habitPercentage}%`;
-      $("#habitProgressTrack").setAttribute("aria-valuemax", Math.max(state.habits.length, 1));
-      $("#habitProgressTrack").setAttribute("aria-valuenow", completedToday);
-      $("#taskProgressLabel").textContent = `${completedTasksToday} / ${todayTasks.length}`;
+      $("#taskProgressLabel").textContent = `${taskPercentage}%`;
       $("#taskProgressFill").style.width = `${taskPercentage}%`;
-      $("#taskProgressTrack").setAttribute("aria-valuemax", Math.max(todayTasks.length, 1));
-      $("#taskProgressTrack").setAttribute("aria-valuenow", completedTasksToday);
       $("#habitCountLabel").textContent = `${state.habits.length} ${pluralize(state.habits.length, ["привычка", "привычки", "привычек"])}`;
       $("#taskCountLabel").textContent = `${todayTasks.length} ${pluralize(todayTasks.length, ["задача", "задачи", "задач"])}`;
 
-      if (!total) {
+      const remainingHabits = state.habits.length - completedToday;
+      const remainingTasks = todayTasks.length - completedTasksToday;
+      if (!state.habits.length && !todayTasks.length) {
         $("#statCaption").textContent = "Добавь привычку или задачу";
-      } else if (percentage === 100) {
+      } else if (!remainingHabits && !remainingTasks) {
         $("#statCaption").textContent = "Всё на сегодня выполнено 🎉";
       } else {
-        const remainingHabits = state.habits.length - completedToday;
-        const remainingTasks = todayTasks.length - completedTasksToday;
-        $("#statCaption").textContent = `Осталось: привычек — ${remainingHabits}, задач — ${remainingTasks}`;
+        const remaining = [];
+        if (remainingHabits) remaining.push(`${remainingHabits} ${pluralize(remainingHabits, ["привычка", "привычки", "привычек"])}`);
+        if (remainingTasks) remaining.push(`${remainingTasks} ${pluralize(remainingTasks, ["задача", "задачи", "задач"])}`);
+        $("#statCaption").textContent = `Осталось: ${remaining.join(", ")}`;
       }
 
       renderTasks();
@@ -1020,6 +1006,7 @@
           <div class="habit-footer">
             <div class="streak">🔥 <strong>${streak}</strong> ${pluralize(streak, ["день подряд", "дня подряд", "дней подряд"])}</div>
             <div class="mini-actions">
+              <button class="mini-btn" data-action="activity" data-id="${escapeAttr(habit.id)}">Активность</button>
               <button class="mini-btn" data-action="edit" data-id="${escapeAttr(habit.id)}">Изменить</button>
               <button class="mini-btn danger" data-action="delete" data-id="${escapeAttr(habit.id)}">Удалить</button>
             </div>
@@ -1031,7 +1018,23 @@
 
     function renderCalendar() {
       const calendar = $("#calendar");
+      const meta = $("#calendarMeta");
       calendar.innerHTML = "";
+      meta.innerHTML = "";
+
+      const selectedHabit = state.habits.find(habit => habit.id === selectedActivityHabitId);
+      if (selectedHabit) {
+        meta.append("Активность: ", document.createTextNode(selectedHabit.name));
+        const resetButton = document.createElement("button");
+        resetButton.type = "button";
+        resetButton.className = "mini-btn calendar-reset";
+        resetButton.dataset.action = "all-activity";
+        resetButton.textContent = "Показать все";
+        meta.appendChild(resetButton);
+      } else {
+        selectedActivityHabitId = null;
+        meta.textContent = "Общая активность";
+      }
 
       const today = new Date();
       const start = addDays(today, -29);
@@ -1050,17 +1053,19 @@
       for (let i = 0; i < 30; i++) {
         const date = addDays(start, i);
         const key = localDateKey(date);
-        const completed = state.habits.reduce((count, habit) => {
-          return count + (habit.completedDates.includes(key) ? 1 : 0);
-        }, 0);
-        const total = state.habits.length;
+        const completed = selectedHabit
+          ? Number(selectedHabit.completedDates.includes(key))
+          : state.habits.reduce((count, habit) => count + Number(habit.completedDates.includes(key)), 0);
+        const total = selectedHabit ? 1 : state.habits.length;
         const level = total ? Math.ceil((completed / total) * 4) : 0;
         const isToday = key === localDateKey(today);
         const future = date > today;
 
         const box = document.createElement("div");
         box.className = `day-box level-${level}${isToday ? " today" : ""}${future ? " future" : ""}`;
-        box.title = `${formatDateShort(date)} — ${completed} из ${total} привычек`;
+        box.title = selectedHabit
+          ? `${formatDateShort(date)} — ${completed ? "выполнено" : "не выполнено"}: ${selectedHabit.name}`
+          : `${formatDateShort(date)} — ${completed} из ${total} привычек`;
         calendar.appendChild(box);
       }
     }
@@ -1326,6 +1331,17 @@
       if (action === "toggle") toggleHabit(id);
       if (action === "edit") openHabitModal(id);
       if (action === "delete") deleteHabit(id);
+      if (action === "activity") {
+        selectedActivityHabitId = id;
+        renderCalendar();
+        $("#activitySection").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    $("#calendarMeta").addEventListener("click", event => {
+      if (!event.target.closest('[data-action="all-activity"]')) return;
+      selectedActivityHabitId = null;
+      renderCalendar();
     });
 
     $("#taskList").addEventListener("click", event => {
