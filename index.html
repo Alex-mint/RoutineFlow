@@ -215,9 +215,15 @@
     .stat-caption { color: var(--muted-2); font-size: 12px; }
 
     .toolbar {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 10px;
       margin: 14px 0;
+    }
+
+    .toolbar > button {
+      width: 100%;
+      min-width: 0;
     }
 
     .primary-btn, .secondary-btn {
@@ -249,6 +255,9 @@
     }
 
     .secondary-btn:hover { background: rgba(13, 184, 169); }
+
+    #futureTasksBtn { background: #3b5f9a; }
+    #futureTasksBtn:hover { background: #4a70b2; }
 
     .section {
       border-radius: var(--radius);
@@ -336,6 +345,11 @@
 
     .task-card {
       border-left: 3px solid var(--accent);
+    }
+
+    .task-card.long-task {
+      border-left-color: #ff8b6a;
+      background: linear-gradient(180deg, rgba(255,139,106,.10), rgba(255,255,255,.02)), var(--card);
     }
 
     .task-card.done {
@@ -573,9 +587,9 @@
     .field { margin-bottom: 12px; }
     .field label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 12px; }
 
-    .text-input {
+    .text-input,
+    .text-area {
       width: 100%;
-      height: 48px;
       border-radius: 14px;
       border: 1px solid var(--border);
       outline: none;
@@ -584,7 +598,42 @@
       color: var(--text);
     }
 
-    .text-input:focus { border-color: rgba(139,124,255,.65); box-shadow: 0 0 0 4px rgba(139,124,255,.1); }
+    .text-input {
+      height: 48px;
+    }
+
+    .text-area {
+      min-height: 88px;
+      resize: vertical;
+      padding: 12px 14px;
+      line-height: 1.5;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 2px 2px;
+    }
+
+    .checkbox-input {
+      width: 18px;
+      height: 18px;
+      accent-color: #ff8b6a;
+      cursor: pointer;
+    }
+
+    .checkbox-label {
+      color: var(--text);
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .text-input:focus,
+    .text-area:focus { border-color: rgba(139,124,255,.65); box-shadow: 0 0 0 4px rgba(139,124,255,.1); }
+
+    #taskDate { color-scheme: dark; }
 
     .color-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -636,11 +685,11 @@
       .hero { grid-template-columns: 1fr; }
       .hero-stat { min-height: 125px; }
       .footer-actions { grid-template-columns: 1fr 1fr; }
+      .toolbar { grid-template-columns: 1fr; }
     }
 
     @media (max-width: 400px) {
       .topbar { align-items: flex-start; }
-      .toolbar { flex-direction: column; }
       .hero-main, .hero-stat, .section { border-radius: 19px; }
       .footer-actions { grid-template-columns: 1fr; }
     }
@@ -696,11 +745,12 @@
     <div class="toolbar">
       <button class="primary-btn" id="addHabitBtn">＋ Добавить привычку</button>
       <button class="secondary-btn" id="addTaskBtn">＋ Задача на сегодня</button>
+      <button class="secondary-btn" id="futureTasksBtn" type="button">Будущие задачи</button>
     </div>
 
     <section class="section">
       <div class="section-header">
-        <h3 class="section-title">Задачи на сегодня</h3>
+        <h3 class="section-title" id="taskSectionTitle">Задачи на сегодня</h3>
         <div class="section-meta" id="taskCountLabel">0 задач</div>
       </div>
       <div class="habit-list" id="taskList"></div>
@@ -766,6 +816,23 @@
       </div>
 
       <div class="field">
+        <label for="habitDescription">Описание</label>
+        <textarea class="text-area" id="habitDescription" maxlength="180" placeholder="Например, читать 20 минут без телефона" autocomplete="off"></textarea>
+      </div>
+
+      <div class="field" id="taskDateField">
+        <label for="taskDate">Дата задачи</label>
+        <input class="text-input" id="taskDate" type="date" required />
+      </div>
+
+      <div class="field">
+        <div class="checkbox-row">
+          <input class="checkbox-input" id="longTaskToggle" type="checkbox" />
+          <label class="checkbox-label" for="longTaskToggle">Долгая задача</label>
+        </div>
+      </div>
+
+      <div class="field">
         <label>Цвет</label>
         <div class="color-row" id="colorRow"></div>
       </div>
@@ -802,6 +869,7 @@
     let modalType = "habit";
     let selectedColor = COLORS[0];
     let selectedActivityHabitId = null;
+    let showingFutureTasks = false;
     let toastTimer = null;
 
     const $ = (selector) => document.querySelector(selector);
@@ -825,6 +893,9 @@
         parsed.habits = parsed.habits.map(h => ({
           id: String(h.id || crypto.randomUUID()),
           name: String(h.name || "Без названия").trim().slice(0, 80),
+          description: typeof h.description === "string"
+            ? h.description.trim().slice(0, 180)
+            : "",
           color: COLORS.includes(h.color) ? h.color : COLORS[0],
           completedDates: Array.isArray(h.completedDates)
             ? [...new Set(h.completedDates.filter(isValidDateKey))].sort()
@@ -847,6 +918,11 @@
             .map(task => ({
               id: String(task.id || crypto.randomUUID()),
               name: task.name.trim().slice(0, 80) || "Без названия",
+              description: typeof task.description === "string"
+                ? task.description.trim().slice(0, 180)
+                : "",
+              longTask: Boolean(task.longTask),
+              createdAt: isValidDateKey(task.createdAt) ? task.createdAt : task.date,
               color: COLORS.includes(task.color) ? task.color : COLORS[0],
               date: task.date,
               completed: Boolean(task.completed)
@@ -917,11 +993,23 @@
     }
 
     function tasksForToday() {
-      return state.tasks.filter(task => task.date === localDateKey());
+      const today = localDateKey();
+      return state.tasks.filter(task => {
+        if (task.longTask) return !task.completed && task.date <= today;
+        return task.date === today;
+      });
     }
 
     function isTaskDoneToday(task) {
-      return task.date === localDateKey() && task.completed;
+      return task.completed;
+    }
+
+    function getLongTaskAgeDays(task) {
+      if (!task.longTask || !task.createdAt || !isValidDateKey(task.createdAt)) return 0;
+      const created = parseDateKey(task.createdAt);
+      const today = new Date();
+      const diffTime = today.setHours(0, 0, 0, 0) - created.setHours(0, 0, 0, 0);
+      return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
     }
 
     function calculateStreak(habit) {
@@ -971,7 +1059,7 @@
       $("#taskCountLabel").textContent = `${todayTasks.length} ${pluralize(todayTasks.length, ["задача", "задачи", "задач"])}`;
 
       const remainingHabits = state.habits.length - completedToday;
-      const remainingTasks = todayTasks.length - completedTasksToday;
+      const remainingTasks = todayTasks.filter(task => !task.longTask).length - todayTasks.filter(task => !task.longTask && task.completed).length;
       if (!state.habits.length && !todayTasks.length) {
         $("#statCaption").textContent = "Добавь привычку или задачу";
       } else if (!remainingHabits && !remainingTasks) {
@@ -990,15 +1078,22 @@
 
     function renderTasks() {
       const container = $("#taskList");
-      const tasks = tasksForToday();
+      const today = localDateKey();
+      const tasks = showingFutureTasks
+        ? state.tasks.filter(task => task.date > today)
+        : tasksForToday();
+      $("#taskSectionTitle").textContent = showingFutureTasks ? "Будущие задачи" : "Задачи на сегодня";
+      $("#taskCountLabel").textContent = `${tasks.length} ${pluralize(tasks.length, ["задача", "задачи", "задач"])}`;
+      $("#futureTasksBtn").textContent = showingFutureTasks ? "К задачам на сегодня" : "Будущие задачи";
+      $("#futureTasksBtn").setAttribute("aria-pressed", String(showingFutureTasks));
       container.innerHTML = "";
 
       if (!tasks.length) {
         container.innerHTML = `
           <div class="empty" style="grid-column:1/-1">
-            <div class="empty-icon">📝</div>
-            <h3>На сегодня задач нет</h3>
-            <p>Добавь разовое дело — оно не станет привычкой и не повторится завтра.</p>
+            <div class="empty-icon">${showingFutureTasks ? "📅" : "📝"}</div>
+            <h3>${showingFutureTasks ? "Будущих задач нет" : "На сегодня задач нет"}</h3>
+            <p>${showingFutureTasks ? "Запланированные на будущие даты задачи появятся здесь." : "Добавь разовое дело — оно не станет привычкой и не повторится завтра."}</p>
           </div>
         `;
         return;
@@ -1009,8 +1104,9 @@
         .filter(Boolean);
       for (const task of orderedTasks) {
         const done = isTaskDoneToday(task);
+        const ageDays = getLongTaskAgeDays(task);
         const card = document.createElement("article");
-        card.className = `habit-card task-card${done ? " done" : ""}`;
+        card.className = `habit-card task-card${done ? " done" : ""}${task.longTask ? " long-task" : ""}`;
         card.dataset.taskId = task.id;
         card.innerHTML = `
           <div class="habit-top">
@@ -1019,12 +1115,14 @@
               <span>${done ? "✓" : ""}</span>
             </button>
             <div class="habit-main">
-              <h3 class="habit-name" style="color:${task.color}">${escapeHtml(task.name)}</h3>
-              <p class="habit-sub">${done ? "Сегодня выполнено" : "Разовая задача на сегодня"}</p>
+              <h3 class="habit-name" style="color:${task.longTask ? "#ff8b6a" : task.color}">${escapeHtml(task.name)}</h3>
+              <p class="habit-sub">${showingFutureTasks
+                ? `Запланировано: ${escapeHtml(formatDateLong(parseDateKey(task.date)))}`
+                : done ? "Сегодня выполнено" : task.longTask ? "Долгая задача" : "Разовая задача на сегодня"}</p>
             </div>
           </div>
           <div class="habit-footer">
-            <div class="streak">${done ? "✓ Выполнено" : "○ Ожидает выполнения"}</div>
+            <div class="streak">${task.longTask ? "🔥 " : ""}${task.longTask ? `<strong>${ageDays}</strong> ${pluralize(ageDays, ["день", "дня", "дней"])}` : done ? "✓ Выполнено" : "○ Ожидает выполнения"}</div>
             <div class="mini-actions">
               <button class="mini-btn" data-action="edit-task" data-id="${escapeAttr(task.id)}">Изменить</button>
               <button class="mini-btn danger" data-action="delete-task" data-id="${escapeAttr(task.id)}">Удалить</button>
@@ -1175,7 +1273,7 @@
     }
 
     function toggleTask(id) {
-      const task = state.tasks.find(item => item.id === id && item.date === localDateKey());
+      const task = state.tasks.find(item => item.id === id);
       if (!task) return;
       task.completed = !task.completed;
       saveState();
@@ -1190,6 +1288,11 @@
       const habit = id ? state.habits.find(h => h.id === id) : null;
       $("#modalTitle").textContent = habit ? "Изменить привычку" : "Новая привычка";
       $("#habitName").value = habit?.name || "";
+      $("#habitDescription").value = habit?.description || "";
+      $("#habitDescription").placeholder = "Например, читать 20 минут без телефона";
+      $("#taskDateField").style.display = "none";
+      $("#longTaskToggle").checked = false;
+      $("#longTaskToggle").closest(".field")?.style.setProperty("display", "none");
       selectedColor = habit?.color || COLORS[0];
       renderColorPicker();
       $("#habitModal").classList.add("open");
@@ -1201,10 +1304,16 @@
       editingTaskId = id;
       editingHabitId = null;
       modalType = "task";
-      const task = id ? state.tasks.find(item => item.id === id && item.date === localDateKey()) : null;
+      const task = id ? state.tasks.find(item => item.id === id) : null;
       $("#modalTitle").textContent = task ? "Изменить задачу" : "Новая задача на сегодня";
       $("#habitName").value = task?.name || "";
+      $("#habitDescription").value = task?.description || "";
       $("#habitName").placeholder = "Например, Купить продукты";
+      $("#habitDescription").placeholder = "Например, купить продукты до 18:00";
+      $("#taskDate").value = task?.date || localDateKey();
+      $("#taskDateField").style.display = "block";
+      $("#longTaskToggle").checked = Boolean(task?.longTask);
+      $("#longTaskToggle").closest(".field")?.style.setProperty("display", "block");
       selectedColor = task?.color || COLORS[0];
       renderColorPicker();
       $("#habitModal").classList.add("open");
@@ -1218,7 +1327,14 @@
       editingHabitId = null;
       editingTaskId = null;
       modalType = "habit";
+      $("#habitName").value = "";
+      $("#habitDescription").value = "";
+      $("#taskDate").value = "";
+      $("#taskDateField").style.display = "none";
+      $("#longTaskToggle").checked = false;
+      $("#longTaskToggle").closest(".field")?.style.setProperty("display", "block");
       $("#habitName").placeholder = "Например, Читать 20 минут";
+      $("#habitDescription").placeholder = "Например, читать 20 минут без телефона";
     }
 
     function renderColorPicker() {
@@ -1240,6 +1356,8 @@
 
     function saveHabitFromModal() {
       const name = $("#habitName").value.trim();
+      const description = $("#habitDescription").value.trim();
+      const longTask = modalType === "task" && $("#longTaskToggle").checked;
       if (!name) {
         showToast(`Введите название ${modalType === "task" ? "задачи" : "привычки"}`);
         $("#habitName").focus();
@@ -1247,10 +1365,20 @@
       }
 
       if (modalType === "task") {
+        const taskDate = $("#taskDate").value;
+        if (!isValidDateKey(taskDate)) {
+          showToast("Выберите дату задачи");
+          $("#taskDate").focus();
+          return;
+        }
         if (editingTaskId) {
-          const task = state.tasks.find(item => item.id === editingTaskId && item.date === localDateKey());
+          const task = state.tasks.find(item => item.id === editingTaskId);
           if (task) {
             task.name = name.slice(0, 80);
+            task.description = description.slice(0, 180);
+            task.date = taskDate;
+            task.longTask = longTask;
+            if (task.longTask && !task.createdAt) task.createdAt = localDateKey();
             task.color = selectedColor;
           }
           showToast("Задача обновлена");
@@ -1258,8 +1386,11 @@
           const task = {
             id: crypto.randomUUID(),
             name: name.slice(0, 80),
+            description: description.slice(0, 180),
+            longTask,
+            createdAt: localDateKey(),
             color: selectedColor,
-            date: localDateKey(),
+            date: taskDate,
             completed: false
           };
           state.tasks.push(task);
@@ -1270,6 +1401,7 @@
         const habit = state.habits.find(h => h.id === editingHabitId);
         if (habit) {
           habit.name = name.slice(0, 80);
+          habit.description = description.slice(0, 180);
           habit.color = selectedColor;
         }
         showToast("Привычка обновлена");
@@ -1277,6 +1409,7 @@
         state.habits.push({
           id: crypto.randomUUID(),
           name: name.slice(0, 80),
+          description: description.slice(0, 180),
           color: selectedColor,
           completedDates: []
         });
@@ -1290,7 +1423,7 @@
     }
 
     function deleteTask(id) {
-      const task = state.tasks.find(item => item.id === id && item.date === localDateKey());
+      const task = state.tasks.find(item => item.id === id);
       if (!task) return;
       if (!confirm(`Удалить задачу «${task.name}»?`)) return;
       state.tasks = state.tasks.filter(item => item.id !== id);
@@ -1342,6 +1475,7 @@
             return {
               id: String(h.id || crypto.randomUUID()),
               name: h.name.trim().slice(0, 80) || "Без названия",
+              description: typeof h.description === "string" ? h.description.trim().slice(0, 180) : "",
               color: COLORS.includes(h.color) ? h.color : COLORS[0],
               completedDates: Array.isArray(h.completedDates)
                 ? [...new Set(h.completedDates.filter(isValidDateKey))].sort()
@@ -1354,6 +1488,9 @@
               .map(task => ({
                 id: String(task.id || crypto.randomUUID()),
                 name: task.name.trim().slice(0, 80) || "Без названия",
+                description: typeof task.description === "string" ? task.description.trim().slice(0, 180) : "",
+                longTask: Boolean(task.longTask),
+                createdAt: isValidDateKey(task.createdAt) ? task.createdAt : task.date,
                 color: COLORS.includes(task.color) ? task.color : COLORS[0],
                 date: task.date,
                 completed: Boolean(task.completed)
@@ -1420,6 +1557,10 @@
 
     $("#addHabitBtn").addEventListener("click", () => openHabitModal());
     $("#addTaskBtn").addEventListener("click", () => openTaskModal());
+    $("#futureTasksBtn").addEventListener("click", () => {
+      showingFutureTasks = !showingFutureTasks;
+      renderTasks();
+    });
     $("#closeModalBtn").addEventListener("click", closeHabitModal);
     $("#cancelModalBtn").addEventListener("click", closeHabitModal);
     $("#saveHabitBtn").addEventListener("click", saveHabitFromModal);
@@ -1538,7 +1679,12 @@
     });
 
     $("#habitName").addEventListener("keydown", event => {
-      if (event.key === "Enter") saveHabitFromModal();
+      if (event.key === "Enter" && !event.shiftKey) saveHabitFromModal();
+      if (event.key === "Escape") closeHabitModal();
+    });
+
+    $("#habitDescription").addEventListener("keydown", event => {
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) saveHabitFromModal();
       if (event.key === "Escape") closeHabitModal();
     });
 
