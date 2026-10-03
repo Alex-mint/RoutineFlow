@@ -46,6 +46,11 @@
     button, input { font: inherit; }
     button { -webkit-tap-highlight-color: transparent; }
 
+    :where(button, [tabindex]):focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
     .app {
       width: min(100%, var(--max-width));
       margin: 0 auto;
@@ -328,9 +333,7 @@
     }
 
     .habit-drag-handle:hover,
-    .habit-drag-handle:focus-visible,
-    .task-drag-handle:hover,
-    .task-drag-handle:focus-visible {
+    .task-drag-handle:hover {
       color: var(--text);
       background: rgba(255,255,255,.06);
     }
@@ -358,7 +361,7 @@
 
     .habit-top {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
     }
 
@@ -374,10 +377,79 @@
       overflow-wrap: anywhere;
     }
 
+    .habit-desc {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
     .habit-sub {
-      margin: 4px 0 0;
+      margin: 0;
       color: var(--muted);
       font-size: 11px;
+    }
+
+    .habit-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .habit-meta .habit-sub {
+      margin: 0 0 0 auto;
+      text-align: right;
+    }
+
+    .expand-btn {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: rgba(255,255,255,.03);
+      color: var(--muted);
+      cursor: pointer;
+      transition: background .2s ease, color .2s ease;
+    }
+
+    .expand-btn:hover { color: var(--text); background: rgba(255,255,255,.07); }
+    .expand-btn svg { display: block; transition: transform .28s ease; }
+    .habit-card.expanded .expand-btn svg { transform: rotate(180deg); }
+
+    .habit-details {
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      transition: max-height .28s ease, opacity .2s ease, margin-top .28s ease;
+    }
+
+    .habit-card.expanded .habit-details {
+      max-height: 420px;
+      margin-top: 12px;
+      opacity: 1;
+    }
+
+    .habit-details-inner {
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+
+    .habit-details .mini-actions {
+      justify-content: flex-start;
+      margin-top: 12px;
+    }
+
+    .habit-details-empty {
+      color: var(--muted-2);
+      font-size: 12px;
+      font-style: italic;
     }
 
     .check-btn {
@@ -417,14 +489,6 @@
       color: #08130f;
     }
 
-    .habit-footer {
-      margin-top: 12px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-
     .streak {
       display: inline-flex;
       align-items: center;
@@ -438,7 +502,7 @@
 
     .streak strong { color: var(--text); }
 
-    .mini-actions { display: flex; gap: 6px; }
+    .mini-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 
     .mini-btn {
       border: 0;
@@ -573,6 +637,8 @@
       margin-bottom: env(safe-area-inset-bottom);
     }
 
+    .modal-card:focus { outline: none; }
+
     .modal-header {
       display: flex;
       justify-content: space-between;
@@ -675,6 +741,14 @@
 
     .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+
     @media (min-width: 700px) {
       .app { padding-left: 24px; padding-right: 24px; }
       .habit-list { grid-template-columns: 1fr 1fr; }
@@ -684,7 +758,6 @@
     @media (max-width: 620px) {
       .hero { grid-template-columns: 1fr; }
       .hero-stat { min-height: 125px; }
-      .footer-actions { grid-template-columns: 1fr 1fr; }
       .toolbar { grid-template-columns: 1fr; }
     }
 
@@ -744,8 +817,8 @@
 
     <div class="toolbar">
       <button class="primary-btn" id="addHabitBtn">＋ Добавить привычку</button>
-      <button class="secondary-btn" id="addTaskBtn">＋ Задача на сегодня</button>
-      <button class="secondary-btn" id="futureTasksBtn" type="button">Будущие задачи</button>
+      <button class="secondary-btn" id="addTaskBtn">＋ Добавить задачу</button>
+      <button class="secondary-btn" id="futureTasksBtn" type="button" aria-pressed="false">Будущие задачи</button>
     </div>
 
     <section class="section">
@@ -773,14 +846,14 @@
         <div class="weekday-row" aria-hidden="true">
           <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
         </div>
-        <div class="calendar" id="calendar"></div>
+        <div class="calendar" id="calendar" role="img" aria-label="Активность за последние 30 дней"></div>
         <div class="calendar-legend" aria-hidden="true">
           <span>меньше</span>
-          <i class="legend-box level-0"></i>
-          <i class="legend-box level-1"></i>
-          <i class="legend-box level-2"></i>
-          <i class="legend-box level-3"></i>
-          <i class="legend-box level-4"></i>
+          <span class="legend-box level-0"></span>
+          <span class="legend-box level-1"></span>
+          <span class="legend-box level-2"></span>
+          <span class="legend-box level-3"></span>
+          <span class="legend-box level-4"></span>
           <span>больше</span>
         </div>
       </div>
@@ -820,12 +893,12 @@
         <textarea class="text-area" id="habitDescription" maxlength="180" placeholder="Например, читать 20 минут без телефона" autocomplete="off"></textarea>
       </div>
 
-      <div class="field" id="taskDateField">
+      <div class="field" id="taskDateField" hidden>
         <label for="taskDate">Дата задачи</label>
-        <input class="text-input" id="taskDate" type="date" required />
+        <input class="text-input" id="taskDate" type="date" />
       </div>
 
-      <div class="field">
+      <div class="field" id="longTaskField" hidden>
         <div class="checkbox-row">
           <input class="checkbox-input" id="longTaskToggle" type="checkbox" />
           <label class="checkbox-label" for="longTaskToggle">Долгая задача</label>
@@ -833,8 +906,8 @@
       </div>
 
       <div class="field">
-        <label>Цвет</label>
-        <div class="color-row" id="colorRow"></div>
+        <label id="colorLabel">Цвет</label>
+        <div class="color-row" id="colorRow" role="radiogroup" aria-labelledby="colorLabel"></div>
       </div>
 
       <div class="modal-actions">
@@ -845,9 +918,9 @@
   </div>
 
   <div class="modal" id="settingsModal" aria-hidden="true">
-    <div class="modal-card">
+    <div class="modal-card" id="settingsCard" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
       <div class="modal-header">
-        <h2 class="modal-title">Настройки</h2>
+        <h2 class="modal-title" id="settingsTitle">Настройки</h2>
         <button class="icon-btn modal-close" id="closeSettingsBtn" aria-label="Закрыть">×</button>
       </div>
       <div style="color:var(--muted); font-size:13px; line-height:1.6; margin-bottom:16px;">
@@ -857,13 +930,20 @@
     </div>
   </div>
 
-  <div class="toast" id="toast"></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
     const STORAGE_KEY = "habitFlow.v1";
     const COLORS = ["#8b7cff", "#52d7a4", "#ff8b6a", "#5eb8ff", "#f2c85b", "#e77cff"];
+    const DAY_MS = 86400000;
+
+    const HABIT_FORMS = ["привычка", "привычки", "привычек"];
+    const TASK_FORMS = ["задача", "задачи", "задач"];
+    const DAY_FORMS = ["день", "дня", "дней"];
+    const STREAK_FORMS = ["день подряд", "дня подряд", "дней подряд"];
 
     const state = loadState();
+
     let editingHabitId = null;
     let editingTaskId = null;
     let modalType = "habit";
@@ -871,85 +951,125 @@
     let selectedActivityHabitId = null;
     let showingFutureTasks = false;
     let toastTimer = null;
+    let storageWarned = false;
+    let lastFocusedElement = null;
+    const expandedIds = new Set();
 
     const $ = (selector) => document.querySelector(selector);
 
+    /* ---------- Storage & model normalization ---------- */
+
     function defaultState() {
+      return { version: 1, habits: [], habitOrder: [], tasks: [], taskOrder: [] };
+    }
+
+    function createId() {
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        return crypto.randomUUID();
+      }
+      return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    function claimId(candidate, taken) {
+      let id = candidate == null ? "" : String(candidate);
+      while (!id || taken.has(id)) id = createId();
+      taken.add(id);
+      return id;
+    }
+
+    function normalizeDescription(value) {
+      return typeof value === "string" ? value.trim().slice(0, 180) : "";
+    }
+
+    function normalizeDates(value) {
+      if (!Array.isArray(value)) return [];
+      return [...new Set(value.filter(isValidDateKey))].sort();
+    }
+
+    function normalizeHabits(rawHabits) {
+      const takenIds = new Set();
+      return rawHabits
+        .filter(habit => habit && typeof habit.name === "string")
+        .map(habit => ({
+          id: claimId(habit.id, takenIds),
+          name: habit.name.trim().slice(0, 80) || "Без названия",
+          description: normalizeDescription(habit.description),
+          color: COLORS.includes(habit.color) ? habit.color : COLORS[0],
+          completedDates: normalizeDates(habit.completedDates)
+        }));
+    }
+
+    function normalizeTasks(rawTasks) {
+      const takenIds = new Set();
+      return rawTasks
+        .filter(task => task && typeof task.name === "string" && isValidDateKey(task.date))
+        .map(task => ({
+          id: claimId(task.id, takenIds),
+          name: task.name.trim().slice(0, 80) || "Без названия",
+          description: normalizeDescription(task.description),
+          longTask: Boolean(task.longTask),
+          createdAt: isValidDateKey(task.createdAt) ? task.createdAt : task.date,
+          color: COLORS.includes(task.color) ? task.color : COLORS[0],
+          date: task.date,
+          completed: Boolean(task.completed)
+        }));
+    }
+
+    function normalizeOrder(rawOrder, items, compare) {
+      const knownIds = new Set(items.map(item => item.id));
+      const base = Array.isArray(rawOrder)
+        ? [...new Set(rawOrder.filter(id => typeof id === "string" && knownIds.has(id)))]
+        : [...items].sort(compare).map(item => item.id);
+      return [...base, ...items.filter(item => !base.includes(item.id)).map(item => item.id)];
+    }
+
+    function compareHabits(a, b) {
+      return Number(isDoneToday(a)) - Number(isDoneToday(b))
+        || a.name.localeCompare(b.name, "ru");
+    }
+
+    function compareTasks(today) {
+      return (a, b) => Number(b.date === today) - Number(a.date === today)
+        || Number(a.completed) - Number(b.completed)
+        || a.name.localeCompare(b.name, "ru");
+    }
+
+    function normalizeState(parsed) {
+      if (!parsed || !Array.isArray(parsed.habits)) return defaultState();
+      const habits = normalizeHabits(parsed.habits);
+      const tasks = normalizeTasks(Array.isArray(parsed.tasks) ? parsed.tasks : []);
       return {
         version: 1,
-        habits: [],
-        habitOrder: [],
-        tasks: [],
-        taskOrder: []
+        habits,
+        habitOrder: normalizeOrder(parsed.habitOrder, habits, compareHabits),
+        tasks,
+        taskOrder: normalizeOrder(parsed.taskOrder, tasks, compareTasks(localDateKey()))
       };
     }
 
     function loadState() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return defaultState();
-        const parsed = JSON.parse(raw);
-        if (!parsed || !Array.isArray(parsed.habits)) return defaultState();
-        parsed.habits = parsed.habits.map(h => ({
-          id: String(h.id || crypto.randomUUID()),
-          name: String(h.name || "Без названия").trim().slice(0, 80),
-          description: typeof h.description === "string"
-            ? h.description.trim().slice(0, 180)
-            : "",
-          color: COLORS.includes(h.color) ? h.color : COLORS[0],
-          completedDates: Array.isArray(h.completedDates)
-            ? [...new Set(h.completedDates.filter(isValidDateKey))].sort()
-            : []
-        }));
-        const habitIds = new Set(parsed.habits.map(habit => habit.id));
-        const savedOrder = Array.isArray(parsed.habitOrder)
-          ? [...new Set(parsed.habitOrder.filter(id => typeof id === "string" && habitIds.has(id)))]
-          : parsed.habits
-            .slice()
-            .sort((a, b) => Number(isDoneToday(a)) - Number(isDoneToday(b)) || a.name.localeCompare(b.name, "ru"))
-            .map(habit => habit.id);
-        parsed.habitOrder = [
-          ...savedOrder,
-          ...parsed.habits.filter(habit => !savedOrder.includes(habit.id)).map(habit => habit.id)
-        ];
-        parsed.tasks = Array.isArray(parsed.tasks)
-          ? parsed.tasks
-            .filter(task => task && typeof task.name === "string" && isValidDateKey(task.date))
-            .map(task => ({
-              id: String(task.id || crypto.randomUUID()),
-              name: task.name.trim().slice(0, 80) || "Без названия",
-              description: typeof task.description === "string"
-                ? task.description.trim().slice(0, 180)
-                : "",
-              longTask: Boolean(task.longTask),
-              createdAt: isValidDateKey(task.createdAt) ? task.createdAt : task.date,
-              color: COLORS.includes(task.color) ? task.color : COLORS[0],
-              date: task.date,
-              completed: Boolean(task.completed)
-            }))
-          : [];
-        const taskIds = new Set(parsed.tasks.map(task => task.id));
-        const savedTaskOrder = Array.isArray(parsed.taskOrder)
-          ? [...new Set(parsed.taskOrder.filter(id => typeof id === "string" && taskIds.has(id)))]
-          : [
-            ...parsed.tasks
-              .filter(task => task.date === localDateKey())
-              .sort((a, b) => Number(isTaskDoneToday(a)) - Number(isTaskDoneToday(b)) || a.name.localeCompare(b.name, "ru")),
-            ...parsed.tasks.filter(task => task.date !== localDateKey())
-          ].map(task => task.id);
-        parsed.taskOrder = [
-          ...savedTaskOrder,
-          ...parsed.tasks.filter(task => !savedTaskOrder.includes(task.id)).map(task => task.id)
-        ];
-        return parsed;
+        return raw ? normalizeState(JSON.parse(raw)) : defaultState();
       } catch {
         return defaultState();
       }
     }
 
     function saveState() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        return true;
+      } catch {
+        if (!storageWarned) {
+          storageWarned = true;
+          showToast("Хранилище недоступно — данные не сохранятся");
+        }
+        return false;
+      }
     }
+
+    /* ---------- Dates ---------- */
 
     function localDateKey(date = new Date()) {
       const y = date.getFullYear();
@@ -973,6 +1093,14 @@
       return /^\d{4}-\d{2}-\d{2}$/.test(String(value));
     }
 
+    function utcDayNumber(date) {
+      return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS;
+    }
+
+    function daysBetween(fromKey, toDate) {
+      return Math.round(utcDayNumber(toDate) - utcDayNumber(parseDateKey(fromKey)));
+    }
+
     function formatDateLong(date) {
       return new Intl.DateTimeFormat("ru-RU", {
         weekday: "long",
@@ -988,28 +1116,24 @@
       }).format(date);
     }
 
+    /* ---------- Domain queries ---------- */
+
     function isDoneToday(habit) {
       return habit.completedDates.includes(localDateKey());
     }
 
-    function tasksForToday() {
+    function createView() {
       const today = localDateKey();
-      return state.tasks.filter(task => {
-        if (task.longTask) return !task.completed && task.date <= today;
-        return task.date === today;
-      });
-    }
-
-    function isTaskDoneToday(task) {
-      return task.completed;
-    }
-
-    function getLongTaskAgeDays(task) {
-      if (!task.longTask || !task.createdAt || !isValidDateKey(task.createdAt)) return 0;
-      const created = parseDateKey(task.createdAt);
-      const today = new Date();
-      const diffTime = today.setHours(0, 0, 0, 0) - created.setHours(0, 0, 0, 0);
-      return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
+      const todayTasks = state.tasks.filter(task =>
+        task.longTask ? task.date <= today : task.date === today
+      );
+      return {
+        today,
+        todayTasks,
+        visibleTasks: showingFutureTasks
+          ? state.tasks.filter(task => task.date > today)
+          : todayTasks
+      };
     }
 
     function calculateStreak(habit) {
@@ -1017,7 +1141,6 @@
       if (!habit.completedDates.includes(localDateKey(cursor))) {
         cursor = addDays(cursor, -1);
       }
-
       let streak = 0;
       while (habit.completedDates.includes(localDateKey(cursor))) {
         streak++;
@@ -1026,214 +1149,22 @@
       return streak;
     }
 
-    function totalCompletionsLast30Days() {
-      const start = addDays(new Date(), -29);
-      const validKeys = new Set();
-      for (let i = 0; i < 30; i++) validKeys.add(localDateKey(addDays(start, i)));
-
-      return state.habits.reduce((total, habit) => {
-        return total + habit.completedDates.filter(d => validKeys.has(d)).length;
-      }, 0);
+    function getLongTaskAgeDays(task) {
+      if (!task.longTask || !isValidDateKey(task.createdAt)) return 0;
+      return Math.max(0, daysBetween(task.createdAt, new Date()));
     }
 
-    function render() {
-      const today = localDateKey();
-      const completedToday = state.habits.filter(isDoneToday).length;
-      const todayTasks = tasksForToday();
-      const completedTasksToday = todayTasks.filter(isTaskDoneToday).length;
-      const habitPercentage = state.habits.length
-        ? Math.round((completedToday / state.habits.length) * 100)
-        : 0;
-      const taskPercentage = todayTasks.length
-        ? Math.round((completedTasksToday / todayTasks.length) * 100)
-        : 0;
-
-      $("#dateTitle").textContent = formatDateLong(new Date());
-      $("#habitTodayCount").textContent = `${completedToday} / ${state.habits.length}`;
-      $("#taskTodayCount").textContent = `${completedTasksToday} / ${todayTasks.length}`;
-      $("#habitProgressLabel").textContent = `${habitPercentage}%`;
-      $("#habitProgressFill").style.width = `${habitPercentage}%`;
-      $("#taskProgressLabel").textContent = `${taskPercentage}%`;
-      $("#taskProgressFill").style.width = `${taskPercentage}%`;
-      $("#habitCountLabel").textContent = `${state.habits.length} ${pluralize(state.habits.length, ["привычка", "привычки", "привычек"])}`;
-      $("#taskCountLabel").textContent = `${todayTasks.length} ${pluralize(todayTasks.length, ["задача", "задачи", "задач"])}`;
-
-      const remainingHabits = state.habits.length - completedToday;
-      const remainingTasks = todayTasks.filter(task => !task.longTask).length - todayTasks.filter(task => !task.longTask && task.completed).length;
-      if (!state.habits.length && !todayTasks.length) {
-        $("#statCaption").textContent = "Добавь привычку или задачу";
-      } else if (!remainingHabits && !remainingTasks) {
-        $("#statCaption").textContent = "Всё на сегодня выполнено 🎉";
-      } else {
-        const remaining = [];
-        if (remainingHabits) remaining.push(`${remainingHabits} ${pluralize(remainingHabits, ["привычка", "привычки", "привычек"])}`);
-        if (remainingTasks) remaining.push(`${remainingTasks} ${pluralize(remainingTasks, ["задача", "задачи", "задач"])}`);
-        $("#statCaption").textContent = `Осталось: ${remaining.join(", ")}`;
+    function orderItems(items, order) {
+      const byId = new Map(items.map(item => [item.id, item]));
+      const ordered = [];
+      for (const id of order) {
+        const item = byId.get(id);
+        if (!item) continue;
+        ordered.push(item);
+        byId.delete(id);
       }
-
-      renderTasks();
-      renderHabits();
-      renderCalendar();
-    }
-
-    function renderTasks() {
-      const container = $("#taskList");
-      const today = localDateKey();
-      const tasks = showingFutureTasks
-        ? state.tasks.filter(task => task.date > today)
-        : tasksForToday();
-      $("#taskSectionTitle").textContent = showingFutureTasks ? "Будущие задачи" : "Задачи на сегодня";
-      $("#taskCountLabel").textContent = `${tasks.length} ${pluralize(tasks.length, ["задача", "задачи", "задач"])}`;
-      $("#futureTasksBtn").textContent = showingFutureTasks ? "К задачам на сегодня" : "Будущие задачи";
-      $("#futureTasksBtn").setAttribute("aria-pressed", String(showingFutureTasks));
-      container.innerHTML = "";
-
-      if (!tasks.length) {
-        container.innerHTML = `
-          <div class="empty" style="grid-column:1/-1">
-            <div class="empty-icon">${showingFutureTasks ? "📅" : "📝"}</div>
-            <h3>${showingFutureTasks ? "Будущих задач нет" : "На сегодня задач нет"}</h3>
-            <p>${showingFutureTasks ? "Запланированные на будущие даты задачи появятся здесь." : "Добавь разовое дело — оно не станет привычкой и не повторится завтра."}</p>
-          </div>
-        `;
-        return;
-      }
-
-      const orderedTasks = state.taskOrder
-        .map(id => tasks.find(task => task.id === id))
-        .filter(Boolean);
-      for (const task of orderedTasks) {
-        const done = isTaskDoneToday(task);
-        const ageDays = getLongTaskAgeDays(task);
-        const card = document.createElement("article");
-        card.className = `habit-card task-card${done ? " done" : ""}${task.longTask ? " long-task" : ""}`;
-        card.dataset.taskId = task.id;
-        card.innerHTML = `
-          <div class="habit-top">
-            <button class="task-drag-handle" type="button" aria-label="Перетащить задачу «${escapeAttr(task.name)}»" title="Перетащить">⠿</button>
-            <button class="check-btn" data-action="toggle-task" data-id="${escapeAttr(task.id)}" aria-label="${done ? "Снять отметку" : "Отметить выполненной"}">
-              <span>${done ? "✓" : ""}</span>
-            </button>
-            <div class="habit-main">
-              <h3 class="habit-name" style="color:${task.longTask ? "#ff8b6a" : task.color}">${escapeHtml(task.name)}</h3>
-              <p class="habit-sub">${showingFutureTasks
-                ? `Запланировано: ${escapeHtml(formatDateLong(parseDateKey(task.date)))}`
-                : done ? "Сегодня выполнено" : task.longTask ? "Долгая задача" : "Разовая задача на сегодня"}</p>
-            </div>
-          </div>
-          <div class="habit-footer">
-            <div class="streak">${task.longTask ? "🔥 " : ""}${task.longTask ? `<strong>${ageDays}</strong> ${pluralize(ageDays, ["день", "дня", "дней"])}` : done ? "✓ Выполнено" : "○ Ожидает выполнения"}</div>
-            <div class="mini-actions">
-              <button class="mini-btn" data-action="edit-task" data-id="${escapeAttr(task.id)}">Изменить</button>
-              <button class="mini-btn danger" data-action="delete-task" data-id="${escapeAttr(task.id)}">Удалить</button>
-            </div>
-          </div>
-        `;
-        container.appendChild(card);
-      }
-    }
-
-    function renderHabits() {
-      const container = $("#habitList");
-      container.innerHTML = "";
-
-      if (!state.habits.length) {
-        container.innerHTML = `
-          <div class="empty" style="grid-column:1/-1">
-            <div class="empty-icon">🌱</div>
-            <h3>Начнём с одной привычки</h3>
-            <p>Например: спорт, чтение, вода или 10 минут тишины.<br>Отметка сохраняется прямо в этом браузере.</p>
-          </div>
-        `;
-        return;
-      }
-
-      const orderedHabits = state.habitOrder
-        .map(id => state.habits.find(habit => habit.id === id))
-        .filter(Boolean);
-
-      for (const habit of orderedHabits) {
-        const done = isDoneToday(habit);
-        const streak = calculateStreak(habit);
-        const card = document.createElement("article");
-        card.className = `habit-card${done ? " done" : ""}`;
-        card.dataset.habitId = habit.id;
-        card.innerHTML = `
-          <div class="habit-top">
-            <button class="habit-drag-handle" type="button" aria-label="Перетащить привычку «${escapeAttr(habit.name)}»" title="Перетащить">⠿</button>
-            <button class="check-btn" data-action="toggle" data-id="${escapeAttr(habit.id)}" aria-label="${done ? "Снять отметку" : "Отметить выполненной"}">
-              <span>${done ? "✓" : ""}</span>
-            </button>
-            <div class="habit-main">
-              <h3 class="habit-name" style="color:${habit.color}">${escapeHtml(habit.name)}</h3>
-              <p class="habit-sub">${done ? "Сегодня выполнено" : "Сегодня ещё не выполнено"}</p>
-            </div>
-          </div>
-          <div class="habit-footer">
-            <div class="streak">🔥 <strong>${streak}</strong> ${pluralize(streak, ["день подряд", "дня подряд", "дней подряд"])}</div>
-            <div class="mini-actions">
-              <button class="mini-btn" data-action="activity" data-id="${escapeAttr(habit.id)}">Активность</button>
-              <button class="mini-btn" data-action="edit" data-id="${escapeAttr(habit.id)}">Изменить</button>
-              <button class="mini-btn danger" data-action="delete" data-id="${escapeAttr(habit.id)}">Удалить</button>
-            </div>
-          </div>
-        `;
-        container.appendChild(card);
-      }
-    }
-
-    function renderCalendar() {
-      const calendar = $("#calendar");
-      const meta = $("#calendarMeta");
-      calendar.innerHTML = "";
-      meta.innerHTML = "";
-
-      const selectedHabit = state.habits.find(habit => habit.id === selectedActivityHabitId);
-      if (selectedHabit) {
-        meta.append("Активность: ", document.createTextNode(selectedHabit.name));
-        const resetButton = document.createElement("button");
-        resetButton.type = "button";
-        resetButton.className = "mini-btn calendar-reset";
-        resetButton.dataset.action = "all-activity";
-        resetButton.textContent = "Показать все";
-        meta.appendChild(resetButton);
-      } else {
-        selectedActivityHabitId = null;
-        meta.textContent = "Общая активность";
-      }
-
-      const today = new Date();
-      const start = addDays(today, -29);
-      const startDayMonday = (start.getDay() + 6) % 7;
-
-      $("#calendarStart").textContent = formatDateShort(start);
-      $("#calendarEnd").textContent = formatDateShort(today);
-
-      // Пустые ячейки выравнивают первый день по правильному дню недели.
-      for (let i = 0; i < startDayMonday; i++) {
-        const empty = document.createElement("div");
-        empty.className = "day-empty";
-        calendar.appendChild(empty);
-      }
-
-      for (let i = 0; i < 30; i++) {
-        const date = addDays(start, i);
-        const key = localDateKey(date);
-        const completed = selectedHabit
-          ? Number(selectedHabit.completedDates.includes(key))
-          : state.habits.reduce((count, habit) => count + Number(habit.completedDates.includes(key)), 0);
-        const total = selectedHabit ? 1 : state.habits.length;
-        const level = total ? Math.ceil((completed / total) * 4) : 0;
-        const isToday = key === localDateKey(today);
-        const future = date > today;
-
-        const box = document.createElement("div");
-        box.className = `day-box level-${level}${isToday ? " today" : ""}${future ? " future" : ""}`;
-        box.title = selectedHabit
-          ? `${formatDateShort(date)} — ${completed ? "выполнено" : "не выполнено"}: ${selectedHabit.name}`
-          : `${formatDateShort(date)} — ${completed} из ${total} привычек`;
-        calendar.appendChild(box);
-      }
+      for (const item of byId.values()) ordered.push(item);
+      return ordered;
     }
 
     function pluralize(number, forms) {
@@ -1245,18 +1176,334 @@
       return forms[2];
     }
 
+    function withCount(number, forms) {
+      return `${number} ${pluralize(number, forms)}`;
+    }
+
     function escapeHtml(value) {
       return String(value).replace(/[&<>'"]/g, ch => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
       }[ch]));
     }
 
-    function escapeAttr(value) {
-      return escapeHtml(value);
+    /* ---------- Rendering ---------- */
+
+    function expandKey(scope, id) {
+      return `${scope}:${id}`;
     }
 
+    function toggleDetails(button) {
+      const card = button.closest(".habit-card");
+      if (!card) return;
+      const expanded = button.getAttribute("aria-expanded") !== "true";
+
+      button.setAttribute("aria-expanded", String(expanded));
+      button.setAttribute("aria-label", expanded ? "Скрыть подробности" : "Показать подробности");
+      button.title = expanded ? "Скрыть подробности" : "Показать подробности";
+      card.classList.toggle("expanded", expanded);
+
+      if (!button.dataset.id) return;
+      const scope = card.dataset.taskId === undefined ? "habit" : "task";
+      const key = expandKey(scope, button.dataset.id);
+      if (expanded) expandedIds.add(key);
+      else expandedIds.delete(key);
+    }
+
+    function pruneExpandedIds() {
+      const live = new Set([
+        ...state.habits.map(habit => expandKey("habit", habit.id)),
+        ...state.tasks.map(task => expandKey("task", task.id))
+      ]);
+      for (const key of expandedIds) {
+        if (!live.has(key)) expandedIds.delete(key);
+      }
+    }
+
+    function render() {
+      const focusTarget = captureFocusTarget();
+      pruneExpandedIds();
+      const view = createView();
+      renderStats(view);
+      renderTasks(view);
+      renderHabits();
+      renderCalendar();
+      restoreFocusTarget(focusTarget);
+    }
+
+    function setProgress(prefix, percent) {
+      $(`#${prefix}ProgressFill`).style.width = `${percent}%`;
+      $(`#${prefix}ProgressLabel`).textContent = `${percent}%`;
+    }
+
+    function renderStats({ today, todayTasks }) {
+      const doneHabits = state.habits.filter(habit => habit.completedDates.includes(today)).length;
+      const doneTasks = todayTasks.filter(task => task.completed).length;
+
+      $("#dateTitle").textContent = formatDateLong(new Date());
+      setProgress("habit", state.habits.length ? Math.round((doneHabits / state.habits.length) * 100) : 0);
+      setProgress("task", todayTasks.length ? Math.round((doneTasks / todayTasks.length) * 100) : 0);
+      $("#habitTodayCount").textContent = `${doneHabits} / ${state.habits.length}`;
+      $("#taskTodayCount").textContent = `${doneTasks} / ${todayTasks.length}`;
+      $("#habitCountLabel").textContent = withCount(state.habits.length, HABIT_FORMS);
+      $("#statCaption").textContent = buildCaption(
+        state.habits.length + todayTasks.length === 0,
+        state.habits.length - doneHabits,
+        todayTasks.length - doneTasks
+      );
+    }
+
+    function buildCaption(isEmpty, remainingHabits, remainingTasks) {
+      if (isEmpty) return "Добавь привычку или задачу";
+      if (!remainingHabits && !remainingTasks) return "Всё на сегодня выполнено 🎉";
+      const parts = [];
+      if (remainingHabits) parts.push(withCount(remainingHabits, HABIT_FORMS));
+      if (remainingTasks) parts.push(withCount(remainingTasks, TASK_FORMS));
+      return `Осталось: ${parts.join(", ")}`;
+    }
+
+    function emptyState({ icon, title, text }) {
+      return `<div class="empty" style="grid-column:1/-1">
+        <div class="empty-icon">${icon}</div>
+        <h3>${title}</h3>
+        <p>${text}</p>
+      </div>`;
+    }
+
+    function descriptionBlock(text) {
+      return text
+        ? `<p class="habit-desc">${escapeHtml(text)}</p>`
+        : `<p class="habit-desc habit-details-empty">Без описания</p>`;
+    }
+
+    function expandButton(expanded, id) {
+      return `<button class="expand-btn" type="button" data-action="toggle-details" data-id="${id}"
+        aria-expanded="${expanded}"
+        aria-label="${expanded ? "Скрыть подробности" : "Показать подробности"}"
+        title="${expanded ? "Скрыть подробности" : "Показать подробности"}">
+        <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true" focusable="false">
+          <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2"
+            stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>`;
+    }
+
+    function checkButton(id, done, action) {
+      return `<button class="check-btn" data-action="${action}" data-id="${id}"
+        aria-pressed="${done}"
+        aria-label="${done ? "Снять отметку" : "Отметить выполненной"}">
+        <span>${done ? "✓" : ""}</span>
+      </button>`;
+    }
+
+    function detailsPanel(innerHtml) {
+      return `<div class="habit-details"><div class="habit-details-inner">${innerHtml}</div></div>`;
+    }
+
+    function metaRow(chipHtml, subtitle) {
+      return `<div class="habit-meta">${chipHtml}<p class="habit-sub">${escapeHtml(subtitle)}</p></div>`;
+    }
+
+    function dragHandle(kind, name) {
+      const className = kind === "task" ? "task-drag-handle" : "habit-drag-handle";
+      return `<button class="${className}" type="button"
+        aria-label="Переместить «${escapeHtml(name)}»"
+        title="Перетащи мышью или используй стрелки на клавиатуре">⠿</button>`;
+    }
+
+    function taskSubtitle(task) {
+      if (showingFutureTasks) return `Запланировано: ${formatDateLong(parseDateKey(task.date))}`;
+      if (task.completed) return task.longTask ? "Долгая задача выполнена" : "Сегодня выполнено";
+      return task.longTask ? "Долгая задача" : "Разовая задача на сегодня";
+    }
+
+    function taskStatusChip(task) {
+      if (!task.longTask) {
+        return `<div class="streak">${task.completed ? "✓ Выполнено" : "○ Ожидает выполнения"}</div>`;
+      }
+      const age = getLongTaskAgeDays(task);
+      const status = task.completed ? "✓ Выполнено" : "🔥 В работе";
+      return `<div class="streak">${status} · <strong>${age}</strong> ${pluralize(age, DAY_FORMS)}</div>`;
+    }
+
+    function renderTasks({ visibleTasks }) {
+      const container = $("#taskList");
+      $("#taskSectionTitle").textContent = showingFutureTasks ? "Будущие задачи" : "Задачи на сегодня";
+      $("#taskCountLabel").textContent = withCount(visibleTasks.length, TASK_FORMS);
+      $("#futureTasksBtn").textContent = showingFutureTasks ? "К задачам на сегодня" : "Будущие задачи";
+      $("#futureTasksBtn").setAttribute("aria-pressed", String(showingFutureTasks));
+      container.innerHTML = "";
+
+      if (!visibleTasks.length) {
+        container.innerHTML = emptyState({
+          icon: showingFutureTasks ? "📅" : "📝",
+          title: showingFutureTasks ? "Будущих задач нет" : "На сегодня задач нет",
+          text: showingFutureTasks
+            ? "Запланированные на будущие даты задачи появятся здесь."
+            : "Добавь разовое дело — оно не станет привычкой и не повторится завтра."
+        });
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      for (const task of orderItems(visibleTasks, state.taskOrder)) {
+        fragment.appendChild(createTaskCard(task));
+      }
+      container.appendChild(fragment);
+    }
+
+    function createTaskCard(task) {
+      const id = escapeHtml(task.id);
+      const expanded = expandedIds.has(expandKey("task", task.id));
+      const card = document.createElement("article");
+      card.className = `habit-card task-card${task.longTask ? " long-task" : ""}${task.completed ? " done" : ""}${expanded ? " expanded" : ""}`;
+      card.dataset.taskId = task.id;
+      card.innerHTML = `
+        <div class="habit-top">
+          ${dragHandle("task", task.name)}
+          ${checkButton(id, task.completed, "toggle-task")}
+          <div class="habit-main">
+            <h3 class="habit-name" style="color:${task.color}">${escapeHtml(task.name)}</h3>
+          </div>
+          ${expandButton(expanded, id)}
+        </div>
+        ${detailsPanel(`
+          ${metaRow(taskStatusChip(task), taskSubtitle(task))}
+          ${descriptionBlock(task.description)}
+          <div class="mini-actions">
+            <button class="mini-btn" data-action="edit-task" data-id="${id}">Изменить</button>
+            <button class="mini-btn danger" data-action="delete-task" data-id="${id}">Удалить</button>
+          </div>`)}
+      `;
+      return card;
+    }
+
+    function renderHabits() {
+      const container = $("#habitList");
+      container.innerHTML = "";
+
+      if (!state.habits.length) {
+        container.innerHTML = emptyState({
+          icon: "🌱",
+          title: "Начнём с одной привычки",
+          text: "Например: спорт, чтение, вода или 10 минут тишины.<br>Отметка сохраняется прямо в этом браузере."
+        });
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+      for (const habit of orderItems(state.habits, state.habitOrder)) {
+        fragment.appendChild(createHabitCard(habit));
+      }
+      container.appendChild(fragment);
+    }
+
+    function createHabitCard(habit) {
+      const id = escapeHtml(habit.id);
+      const done = habit.completedDates.includes(localDateKey());
+      const streak = calculateStreak(habit);
+      const expanded = expandedIds.has(expandKey("habit", habit.id));
+      const card = document.createElement("article");
+      card.className = `habit-card${done ? " done" : ""}${expanded ? " expanded" : ""}`;
+      card.dataset.habitId = habit.id;
+      card.innerHTML = `
+        <div class="habit-top">
+          ${dragHandle("habit", habit.name)}
+          ${checkButton(id, done, "toggle")}
+          <div class="habit-main">
+            <h3 class="habit-name" style="color:${habit.color}">${escapeHtml(habit.name)}</h3>
+          </div>
+          ${expandButton(expanded, id)}
+        </div>
+        ${detailsPanel(`
+          ${metaRow(`<div class="streak">🔥 <strong>${streak}</strong> ${pluralize(streak, STREAK_FORMS)}</div>`,
+            done ? "Сегодня выполнено" : "Сегодня ещё не выполнено")}
+          ${descriptionBlock(habit.description)}
+          <div class="mini-actions">
+            <button class="mini-btn" data-action="activity" data-id="${id}">Активность</button>
+            <button class="mini-btn" data-action="edit" data-id="${id}">Изменить</button>
+            <button class="mini-btn danger" data-action="delete" data-id="${id}">Удалить</button>
+          </div>`)}
+      `;
+      return card;
+    }
+
+    function renderCalendar() {
+      const calendar = $("#calendar");
+      const meta = $("#calendarMeta");
+      calendar.innerHTML = "";
+      meta.innerHTML = "";
+
+      const selectedHabit = state.habits.find(habit => habit.id === selectedActivityHabitId);
+      selectedActivityHabitId = selectedHabit ? selectedHabit.id : null;
+
+      if (selectedHabit) {
+        meta.append("Активность: ", document.createTextNode(selectedHabit.name));
+        const resetButton = document.createElement("button");
+        resetButton.type = "button";
+        resetButton.className = "mini-btn calendar-reset";
+        resetButton.dataset.action = "all-activity";
+        resetButton.textContent = "Показать все";
+        meta.appendChild(resetButton);
+      } else {
+        meta.textContent = "Общая активность";
+      }
+
+      const today = new Date();
+      const start = addDays(today, -29);
+      $("#calendarStart").textContent = formatDateShort(start);
+      $("#calendarEnd").textContent = formatDateShort(today);
+
+      const fragment = document.createDocumentFragment();
+      const leadBlanks = (start.getDay() + 6) % 7;
+      for (let i = 0; i < leadBlanks; i++) {
+        const empty = document.createElement("div");
+        empty.className = "day-empty";
+        fragment.appendChild(empty);
+      }
+
+      const todayKey = localDateKey(today);
+      for (let i = 0; i < 30; i++) {
+        const date = addDays(start, i);
+        const key = localDateKey(date);
+        const done = selectedHabit
+          ? Number(selectedHabit.completedDates.includes(key))
+          : state.habits.reduce((sum, habit) => sum + Number(habit.completedDates.includes(key)), 0);
+        const total = selectedHabit ? 1 : state.habits.length;
+        const level = total ? Math.ceil((done / total) * 4) : 0;
+
+        const box = document.createElement("div");
+        box.className = `day-box level-${level}${key === todayKey ? " today" : ""}${date > today ? " future" : ""}`;
+        box.title = selectedHabit
+          ? `${formatDateShort(date)} — ${done ? "выполнено" : "не выполнено"}: ${selectedHabit.name}`
+          : `${formatDateShort(date)} — ${done} из ${total} привычек`;
+        fragment.appendChild(box);
+      }
+
+      calendar.appendChild(fragment);
+    }
+
+    function captureFocusTarget() {
+      const element = document.activeElement;
+      const list = element && element.closest ? element.closest(".habit-list") : null;
+      if (!list || !element.dataset || !element.dataset.action) return null;
+      return { list, action: element.dataset.action, id: element.dataset.id };
+    }
+
+    function restoreFocusTarget(target) {
+      if (!target || !target.list.isConnected) return;
+      const button = [...target.list.querySelectorAll("button[data-action]")]
+        .find(item => item.dataset.action === target.action && item.dataset.id === target.id);
+      if (button) button.focus();
+    }
+
+    function restoreFocus(element) {
+      if (element instanceof HTMLElement && element.isConnected) element.focus();
+    }
+
+    /* ---------- Mutations ---------- */
+
     function toggleHabit(id) {
-      const habit = state.habits.find(h => h.id === id);
+      const habit = state.habits.find(item => item.id === id);
       if (!habit) return;
       const today = localDateKey();
       const index = habit.completedDates.indexOf(today);
@@ -1281,147 +1528,6 @@
       showToast(task.completed ? "Задача выполнена ✓" : "Отметка снята");
     }
 
-    function openHabitModal(id = null) {
-      editingHabitId = id;
-      editingTaskId = null;
-      modalType = "habit";
-      const habit = id ? state.habits.find(h => h.id === id) : null;
-      $("#modalTitle").textContent = habit ? "Изменить привычку" : "Новая привычка";
-      $("#habitName").value = habit?.name || "";
-      $("#habitDescription").value = habit?.description || "";
-      $("#habitDescription").placeholder = "Например, читать 20 минут без телефона";
-      $("#taskDateField").style.display = "none";
-      $("#longTaskToggle").checked = false;
-      $("#longTaskToggle").closest(".field")?.style.setProperty("display", "none");
-      selectedColor = habit?.color || COLORS[0];
-      renderColorPicker();
-      $("#habitModal").classList.add("open");
-      $("#habitModal").setAttribute("aria-hidden", "false");
-      setTimeout(() => $("#habitName").focus(), 50);
-    }
-
-    function openTaskModal(id = null) {
-      editingTaskId = id;
-      editingHabitId = null;
-      modalType = "task";
-      const task = id ? state.tasks.find(item => item.id === id) : null;
-      $("#modalTitle").textContent = task ? "Изменить задачу" : "Новая задача на сегодня";
-      $("#habitName").value = task?.name || "";
-      $("#habitDescription").value = task?.description || "";
-      $("#habitName").placeholder = "Например, Купить продукты";
-      $("#habitDescription").placeholder = "Например, купить продукты до 18:00";
-      $("#taskDate").value = task?.date || localDateKey();
-      $("#taskDateField").style.display = "block";
-      $("#longTaskToggle").checked = Boolean(task?.longTask);
-      $("#longTaskToggle").closest(".field")?.style.setProperty("display", "block");
-      selectedColor = task?.color || COLORS[0];
-      renderColorPicker();
-      $("#habitModal").classList.add("open");
-      $("#habitModal").setAttribute("aria-hidden", "false");
-      setTimeout(() => $("#habitName").focus(), 50);
-    }
-
-    function closeHabitModal() {
-      $("#habitModal").classList.remove("open");
-      $("#habitModal").setAttribute("aria-hidden", "true");
-      editingHabitId = null;
-      editingTaskId = null;
-      modalType = "habit";
-      $("#habitName").value = "";
-      $("#habitDescription").value = "";
-      $("#taskDate").value = "";
-      $("#taskDateField").style.display = "none";
-      $("#longTaskToggle").checked = false;
-      $("#longTaskToggle").closest(".field")?.style.setProperty("display", "block");
-      $("#habitName").placeholder = "Например, Читать 20 минут";
-      $("#habitDescription").placeholder = "Например, читать 20 минут без телефона";
-    }
-
-    function renderColorPicker() {
-      const row = $("#colorRow");
-      row.innerHTML = "";
-      COLORS.forEach(color => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `color-dot${selectedColor === color ? " selected" : ""}`;
-        button.style.background = color;
-        button.setAttribute("aria-label", `Цвет ${color}`);
-        button.addEventListener("click", () => {
-          selectedColor = color;
-          renderColorPicker();
-        });
-        row.appendChild(button);
-      });
-    }
-
-    function saveHabitFromModal() {
-      const name = $("#habitName").value.trim();
-      const description = $("#habitDescription").value.trim();
-      const longTask = modalType === "task" && $("#longTaskToggle").checked;
-      if (!name) {
-        showToast(`Введите название ${modalType === "task" ? "задачи" : "привычки"}`);
-        $("#habitName").focus();
-        return;
-      }
-
-      if (modalType === "task") {
-        const taskDate = $("#taskDate").value;
-        if (!isValidDateKey(taskDate)) {
-          showToast("Выберите дату задачи");
-          $("#taskDate").focus();
-          return;
-        }
-        if (editingTaskId) {
-          const task = state.tasks.find(item => item.id === editingTaskId);
-          if (task) {
-            task.name = name.slice(0, 80);
-            task.description = description.slice(0, 180);
-            task.date = taskDate;
-            task.longTask = longTask;
-            if (task.longTask && !task.createdAt) task.createdAt = localDateKey();
-            task.color = selectedColor;
-          }
-          showToast("Задача обновлена");
-        } else {
-          const task = {
-            id: crypto.randomUUID(),
-            name: name.slice(0, 80),
-            description: description.slice(0, 180),
-            longTask,
-            createdAt: localDateKey(),
-            color: selectedColor,
-            date: taskDate,
-            completed: false
-          };
-          state.tasks.push(task);
-          state.taskOrder.push(task.id);
-          showToast("Задача добавлена");
-        }
-      } else if (editingHabitId) {
-        const habit = state.habits.find(h => h.id === editingHabitId);
-        if (habit) {
-          habit.name = name.slice(0, 80);
-          habit.description = description.slice(0, 180);
-          habit.color = selectedColor;
-        }
-        showToast("Привычка обновлена");
-      } else {
-        state.habits.push({
-          id: crypto.randomUUID(),
-          name: name.slice(0, 80),
-          description: description.slice(0, 180),
-          color: selectedColor,
-          completedDates: []
-        });
-        state.habitOrder.push(state.habits[state.habits.length - 1].id);
-        showToast("Привычка добавлена");
-      }
-
-      saveState();
-      closeHabitModal();
-      render();
-    }
-
     function deleteTask(id) {
       const task = state.tasks.find(item => item.id === id);
       if (!task) return;
@@ -1434,16 +1540,175 @@
     }
 
     function deleteHabit(id) {
-      const habit = state.habits.find(h => h.id === id);
+      const habit = state.habits.find(item => item.id === id);
       if (!habit) return;
-      const confirmed = confirm(`Удалить привычку «${habit.name}» и всю её историю?`);
-      if (!confirmed) return;
-      state.habits = state.habits.filter(h => h.id !== id);
+      if (!confirm(`Удалить привычку «${habit.name}» и всю её историю?`)) return;
+      state.habits = state.habits.filter(item => item.id !== id);
       state.habitOrder = state.habitOrder.filter(habitId => habitId !== id);
+      if (selectedActivityHabitId === id) selectedActivityHabitId = null;
       saveState();
       render();
       showToast("Привычка удалена");
     }
+
+    function showHabitActivity(id) {
+      selectedActivityHabitId = id;
+      renderCalendar();
+      $("#activitySection").scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    /* ---------- Modal ---------- */
+
+    function openModal(type, id = null) {
+      const isTask = type === "task";
+      modalType = type;
+      editingHabitId = isTask ? null : id;
+      editingTaskId = isTask ? id : null;
+
+      const item = isTask
+        ? state.tasks.find(task => task.id === id)
+        : state.habits.find(habit => habit.id === id);
+
+      const isEdit = Boolean(item);
+      $("#modalTitle").textContent = isTask
+        ? (isEdit ? "Изменить задачу" : "Новая задача")
+        : (isEdit ? "Изменить привычку" : "Новая привычка");
+
+      $("#habitName").value = item ? item.name : "";
+      $("#habitDescription").value = item ? item.description : "";
+      $("#habitName").placeholder = isTask ? "Например, Купить продукты" : "Например, Читать 20 минут";
+      $("#habitDescription").placeholder = isTask
+        ? "Например, купить продукты до 18:00"
+        : "Например, читать 20 минут без телефона";
+
+      $("#taskDateField").hidden = !isTask;
+      $("#taskDate").value = isTask ? (item ? item.date : localDateKey()) : "";
+      $("#longTaskField").hidden = !isTask;
+      $("#longTaskToggle").checked = isTask && Boolean(item && item.longTask);
+
+      selectedColor = (item && item.color) || COLORS[0];
+      renderColorPicker();
+
+      lastFocusedElement = document.activeElement;
+      $("#habitModal").classList.add("open");
+      $("#habitModal").setAttribute("aria-hidden", "false");
+      $("#habitName").focus();
+    }
+
+    function closeModal() {
+      $("#habitModal").classList.remove("open");
+      $("#habitModal").setAttribute("aria-hidden", "true");
+      editingHabitId = null;
+      editingTaskId = null;
+      modalType = "habit";
+      restoreFocus(lastFocusedElement);
+      lastFocusedElement = null;
+    }
+
+    function renderColorPicker() {
+      const row = $("#colorRow");
+      row.innerHTML = "";
+      COLORS.forEach((color, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `color-dot${selectedColor === color ? " selected" : ""}`;
+        button.style.background = color;
+        button.setAttribute("role", "radio");
+        button.setAttribute("aria-checked", String(selectedColor === color));
+        button.setAttribute("aria-label", `Цвет ${index + 1}`);
+        button.addEventListener("click", () => {
+          selectedColor = color;
+          renderColorPicker();
+          $("#colorRow").querySelector(".selected").focus();
+        });
+        row.appendChild(button);
+      });
+    }
+
+    function saveFromModal() {
+      const name = $("#habitName").value.trim();
+      const description = $("#habitDescription").value.trim();
+
+      if (!name) {
+        showToast(`Введите название ${modalType === "task" ? "задачи" : "привычки"}`);
+        $("#habitName").focus();
+        return;
+      }
+
+      const saved = modalType === "task"
+        ? commitTask(name, description)
+        : (commitHabit(name, description), true);
+
+      if (!saved) return;
+      saveState();
+      closeModal();
+      render();
+    }
+
+    function commitTask(name, description) {
+      const date = $("#taskDate").value;
+      if (!isValidDateKey(date)) {
+        showToast("Выберите дату задачи");
+        $("#taskDate").focus();
+        return false;
+      }
+
+      const patch = {
+        name: name.slice(0, 80),
+        description: description.slice(0, 180),
+        date,
+        longTask: $("#longTaskToggle").checked,
+        color: selectedColor
+      };
+
+      const existing = state.tasks.find(item => item.id === editingTaskId);
+      if (existing) {
+        Object.assign(existing, patch);
+        if (existing.longTask && !isValidDateKey(existing.createdAt)) existing.createdAt = existing.date;
+        showToast("Задача обновлена");
+      } else {
+        const task = { id: createId(), completed: false, createdAt: localDateKey(), ...patch };
+        state.tasks.push(task);
+        state.taskOrder.push(task.id);
+        showToast("Задача добавлена");
+      }
+      return true;
+    }
+
+    function commitHabit(name, description) {
+      const patch = {
+        name: name.slice(0, 80),
+        description: description.slice(0, 180),
+        color: selectedColor
+      };
+
+      const existing = state.habits.find(item => item.id === editingHabitId);
+      if (existing) {
+        Object.assign(existing, patch);
+        showToast("Привычка обновлена");
+        return;
+      }
+      const habit = { id: createId(), completedDates: [], ...patch };
+      state.habits.push(habit);
+      state.habitOrder.push(habit.id);
+      showToast("Привычка добавлена");
+    }
+
+    function openSettings() {
+      lastFocusedElement = document.activeElement;
+      $("#settingsModal").classList.add("open");
+      $("#settingsModal").setAttribute("aria-hidden", "false");
+      $("#settingsCard").focus();
+    }
+
+    function closeSettings() {
+      $("#settingsModal").classList.remove("open");
+      $("#settingsModal").setAttribute("aria-hidden", "true");
+      restoreFocus(lastFocusedElement);
+      lastFocusedElement = null;
+    }
+
+    /* ---------- Import / export ---------- */
 
     function exportData() {
       const payload = {
@@ -1453,87 +1718,37 @@
       };
       const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `habit-flow-backup-${localDateKey()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `habit-flow-backup-${localDateKey()}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
       showToast("JSON-файл подготовлен");
     }
 
     function importData(file) {
+      if (!confirm("Импорт заменит текущие данные трекера. Продолжить?")) return;
+
       const reader = new FileReader();
       reader.onload = () => {
         try {
-          const parsed = JSON.parse(reader.result);
-          if (!parsed || !Array.isArray(parsed.habits)) throw new Error("Некорректный формат");
+          const source = JSON.parse(reader.result);
+          if (!source || !Array.isArray(source.habits)) throw new Error("Неверный формат");
 
-          const habits = parsed.habits.map(h => {
-            if (!h || typeof h.name !== "string") throw new Error("Некорректная привычка");
-            return {
-              id: String(h.id || crypto.randomUUID()),
-              name: h.name.trim().slice(0, 80) || "Без названия",
-              description: typeof h.description === "string" ? h.description.trim().slice(0, 180) : "",
-              color: COLORS.includes(h.color) ? h.color : COLORS[0],
-              completedDates: Array.isArray(h.completedDates)
-                ? [...new Set(h.completedDates.filter(isValidDateKey))].sort()
-                : []
-            };
-          });
-          const tasks = Array.isArray(parsed.tasks)
-            ? parsed.tasks
-              .filter(task => task && typeof task.name === "string" && isValidDateKey(task.date))
-              .map(task => ({
-                id: String(task.id || crypto.randomUUID()),
-                name: task.name.trim().slice(0, 80) || "Без названия",
-                description: typeof task.description === "string" ? task.description.trim().slice(0, 180) : "",
-                longTask: Boolean(task.longTask),
-                createdAt: isValidDateKey(task.createdAt) ? task.createdAt : task.date,
-                color: COLORS.includes(task.color) ? task.color : COLORS[0],
-                date: task.date,
-                completed: Boolean(task.completed)
-              }))
-            : [];
-          const habitIds = new Set(habits.map(habit => habit.id));
-          const habitOrder = Array.isArray(parsed.habitOrder)
-            ? [...new Set(parsed.habitOrder.filter(id => typeof id === "string" && habitIds.has(id)))]
-            : habits
-              .slice()
-              .sort((a, b) => Number(isDoneToday(a)) - Number(isDoneToday(b)) || a.name.localeCompare(b.name, "ru"))
-              .map(habit => habit.id);
-          const taskIds = new Set(tasks.map(task => task.id));
-          const taskOrder = Array.isArray(parsed.taskOrder)
-            ? [...new Set(parsed.taskOrder.filter(id => typeof id === "string" && taskIds.has(id)))]
-            : [
-              ...tasks
-                .filter(task => task.date === localDateKey())
-                .sort((a, b) => Number(isTaskDoneToday(a)) - Number(isTaskDoneToday(b)) || a.name.localeCompare(b.name, "ru")),
-              ...tasks.filter(task => task.date !== localDateKey())
-            ].map(task => task.id);
+          const next = normalizeState(source);
+          if (source.habits.length && !next.habits.length) throw new Error("Нет корректных привычек");
 
-          const confirmed = confirm("Импорт заменит текущие данные трекера. Продолжить?");
-          if (!confirmed) return;
-
-          state.version = 1;
-          state.habits = habits;
-          state.habitOrder = [
-            ...habitOrder,
-            ...habits.filter(habit => !habitOrder.includes(habit.id)).map(habit => habit.id)
-          ];
-          state.tasks = tasks;
-          state.taskOrder = [
-            ...taskOrder,
-            ...tasks.filter(task => !taskOrder.includes(task.id)).map(task => task.id)
-          ];
+          Object.assign(state, next);
           saveState();
           render();
           showToast("Данные импортированы");
-        } catch (error) {
+        } catch {
           showToast("Не удалось импортировать JSON");
         }
       };
+      reader.onerror = () => showToast("Не удалось прочитать файл");
       reader.readAsText(file, "utf-8");
     }
 
@@ -1545,53 +1760,50 @@
       toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
     }
 
-    function openSettings() {
-      $("#settingsModal").classList.add("open");
-      $("#settingsModal").setAttribute("aria-hidden", "false");
-    }
-
-    function closeSettings() {
-      $("#settingsModal").classList.remove("open");
-      $("#settingsModal").setAttribute("aria-hidden", "true");
-    }
-
-    $("#addHabitBtn").addEventListener("click", () => openHabitModal());
-    $("#addTaskBtn").addEventListener("click", () => openTaskModal());
-    $("#futureTasksBtn").addEventListener("click", () => {
-      showingFutureTasks = !showingFutureTasks;
-      renderTasks();
-    });
-    $("#closeModalBtn").addEventListener("click", closeHabitModal);
-    $("#cancelModalBtn").addEventListener("click", closeHabitModal);
-    $("#saveHabitBtn").addEventListener("click", saveHabitFromModal);
-    $("#settingsBtn").addEventListener("click", openSettings);
-    $("#closeSettingsBtn").addEventListener("click", closeSettings);
-    $("#exportBtn").addEventListener("click", exportData);
-    $("#importBtn").addEventListener("click", () => $("#importFile").click());
-    $("#importFile").addEventListener("change", event => {
-      const file = event.target.files?.[0];
-      if (file) importData(file);
-      event.target.value = "";
-    });
-
-    $("#habitList").addEventListener("click", event => {
-      const button = event.target.closest("button[data-action]");
-      if (!button) return;
-      const { action, id } = button.dataset;
-      if (action === "toggle") toggleHabit(id);
-      if (action === "edit") openHabitModal(id);
-      if (action === "delete") deleteHabit(id);
-      if (action === "activity") {
-        selectedActivityHabitId = id;
-        renderCalendar();
-        $("#activitySection").scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
+    /* ---------- Drag & drop sorting ---------- */
 
     function enableDragSort(listSelector, handleSelector, cardSelector, orderKey, idKey) {
       const list = $(listSelector);
       let draggedCard = null;
       let dragPointerId = null;
+
+      function persistOrder() {
+        const order = [...list.querySelectorAll(cardSelector)].map(card => card.dataset[idKey]);
+        const current = state[orderKey];
+        if (order.every((id, index) => id === current[index])) return;
+        state[orderKey] = [...order, ...current.filter(id => !order.includes(id))];
+        saveState();
+      }
+
+      function endDrag() {
+        if (!draggedCard) return;
+        draggedCard.classList.remove("dragging");
+        draggedCard = null;
+        dragPointerId = null;
+        persistOrder();
+      }
+
+      function columnCount() {
+        const columns = getComputedStyle(list).gridTemplateColumns.split(" ").length;
+        return Number.isFinite(columns) && columns > 0 ? columns : 1;
+      }
+
+      function moveWithKeyboard(card, key) {
+        const cards = [...list.querySelectorAll(cardSelector)];
+        const index = cards.indexOf(card);
+        if (index < 0) return;
+
+        const delta = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columnCount(), ArrowDown: columnCount() }[key];
+        const target = cards[index + delta];
+        if (!target) return;
+
+        if (delta < 0) list.insertBefore(card, target);
+        else list.insertBefore(target, card);
+
+        persistOrder();
+        const handle = card.querySelector(handleSelector);
+        if (handle) handle.focus();
+      }
 
       list.addEventListener("pointerdown", event => {
         const handle = event.target.closest(handleSelector);
@@ -1603,15 +1815,21 @@
         event.preventDefault();
       });
 
+      list.addEventListener("keydown", event => {
+        const handle = event.target.closest(handleSelector);
+        if (!handle || !KEYBOARD_MOVE_KEYS.has(event.key)) return;
+        event.preventDefault();
+        moveWithKeyboard(handle.closest(cardSelector), event.key);
+      });
+
       document.addEventListener("pointermove", event => {
         if (!draggedCard || event.pointerId !== dragPointerId) return;
-        const target = document.elementFromPoint(event.clientX, event.clientY)
-          ?.closest(cardSelector);
+        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest(cardSelector);
         if (!target || target === draggedCard || target.parentElement !== list) return;
 
         const rect = target.getBoundingClientRect();
-        const columnCount = getComputedStyle(list).gridTemplateColumns.split(" ").length;
-        const insertAfter = columnCount === 1
+        const columns = columnCount();
+        const insertAfter = columns === 1
           ? event.clientY >= rect.top + rect.height / 2
           : event.clientY >= rect.top && event.clientY <= rect.bottom
             ? event.clientX >= rect.left + rect.width / 2
@@ -1619,28 +1837,72 @@
         list.insertBefore(draggedCard, insertAfter ? target.nextSibling : target);
       });
 
-      function finishDrag(event) {
-        if (!draggedCard || event.pointerId !== dragPointerId) return;
-        draggedCard.classList.remove("dragging");
-        const newOrder = [...list.querySelectorAll(cardSelector)].map(card => card.dataset[idKey]);
-        const orderChanged = newOrder.some((id, index) => id !== state[orderKey][index]);
-        draggedCard = null;
-        dragPointerId = null;
-        if (orderChanged) {
-          state[orderKey] = [
-            ...newOrder,
-            ...state[orderKey].filter(id => !newOrder.includes(id))
-          ];
-          saveState();
-        }
-      }
-
-      document.addEventListener("pointerup", finishDrag);
-      document.addEventListener("pointercancel", finishDrag);
+      document.addEventListener("pointerup", event => {
+        if (event.pointerId === dragPointerId) endDrag();
+      });
+      document.addEventListener("pointercancel", event => {
+        if (event.pointerId === dragPointerId) endDrag();
+      });
+      window.addEventListener("blur", endDrag);
     }
 
-    enableDragSort("#habitList", ".habit-drag-handle", ".habit-card[data-habit-id]", "habitOrder", "habitId");
-    enableDragSort("#taskList", ".task-drag-handle", ".habit-card[data-task-id]", "taskOrder", "taskId");
+    const KEYBOARD_MOVE_KEYS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
+    /* ---------- Event wiring ---------- */
+
+    const LIST_ACTIONS = {
+      habit: {
+        toggle: toggleHabit,
+        edit: id => openModal("habit", id),
+        delete: deleteHabit,
+        activity: showHabitActivity,
+        "toggle-details": (id, button) => toggleDetails(button)
+      },
+      task: {
+        "toggle-task": toggleTask,
+        "edit-task": id => openModal("task", id),
+        "delete-task": deleteTask,
+        "toggle-details": (id, button) => toggleDetails(button)
+      }
+    };
+
+    function delegateListAction(scope, event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button) return;
+      const handler = LIST_ACTIONS[scope][button.dataset.action];
+      if (handler) handler(button.dataset.id, button);
+    }
+
+    $("#habitList").addEventListener("click", event => delegateListAction("habit", event));
+    $("#taskList").addEventListener("click", event => delegateListAction("task", event));
+
+    $("#addHabitBtn").addEventListener("click", () => openModal("habit"));
+    $("#addTaskBtn").addEventListener("click", () => openModal("task"));
+    $("#futureTasksBtn").addEventListener("click", () => {
+      showingFutureTasks = !showingFutureTasks;
+      render();
+    });
+
+    $("#closeModalBtn").addEventListener("click", closeModal);
+    $("#cancelModalBtn").addEventListener("click", closeModal);
+    $("#saveHabitBtn").addEventListener("click", saveFromModal);
+    $("#habitModal").addEventListener("click", event => {
+      if (event.target === $("#habitModal")) closeModal();
+    });
+
+    $("#settingsBtn").addEventListener("click", openSettings);
+    $("#closeSettingsBtn").addEventListener("click", closeSettings);
+    $("#settingsModal").addEventListener("click", event => {
+      if (event.target === $("#settingsModal")) closeSettings();
+    });
+
+    $("#exportBtn").addEventListener("click", exportData);
+    $("#importBtn").addEventListener("click", () => $("#importFile").click());
+    $("#importFile").addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) importData(file);
+      event.target.value = "";
+    });
 
     $("#calendarMeta").addEventListener("click", event => {
       if (!event.target.closest('[data-action="all-activity"]')) return;
@@ -1648,55 +1910,43 @@
       renderCalendar();
     });
 
-    $("#taskList").addEventListener("click", event => {
-      const button = event.target.closest("button[data-action]");
-      if (!button) return;
-      const { action, id } = button.dataset;
-      if (action === "toggle-task") toggleTask(id);
-      if (action === "edit-task") openTaskModal(id);
-      if (action === "delete-task") deleteTask(id);
-    });
-
     $("#resetBtn").addEventListener("click", () => {
-      const confirmed = confirm("Удалить все привычки и всю историю? Это действие нельзя отменить без резервной копии.");
-      if (!confirmed) return;
-      state.habits = [];
-      state.habitOrder = [];
-      state.tasks = [];
-      state.taskOrder = [];
+      if (!confirm("Удалить все привычки и всю историю? Это действие нельзя отменить без резервной копии.")) return;
+      Object.assign(state, defaultState());
+      selectedActivityHabitId = null;
       saveState();
-      render();
       closeSettings();
+      render();
       showToast("Все данные удалены");
     });
 
-    $("#habitModal").addEventListener("click", event => {
-      if (event.target === $("#habitModal")) closeHabitModal();
-    });
-
-    $("#settingsModal").addEventListener("click", event => {
-      if (event.target === $("#settingsModal")) closeSettings();
-    });
-
     $("#habitName").addEventListener("keydown", event => {
-      if (event.key === "Enter" && !event.shiftKey) saveHabitFromModal();
-      if (event.key === "Escape") closeHabitModal();
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveFromModal();
+      }
     });
 
     $("#habitDescription").addEventListener("keydown", event => {
-      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) saveHabitFromModal();
-      if (event.key === "Escape") closeHabitModal();
+      if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+        event.preventDefault();
+        saveFromModal();
+      }
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+      if ($("#habitModal").classList.contains("open")) closeModal();
+      else if ($("#settingsModal").classList.contains("open")) closeSettings();
     });
 
     window.addEventListener("storage", () => {
-      const fresh = loadState();
-      state.version = fresh.version;
-      state.habits = fresh.habits;
-      state.habitOrder = fresh.habitOrder;
-      state.tasks = fresh.tasks;
-      state.taskOrder = fresh.taskOrder;
+      Object.assign(state, loadState());
       render();
     });
+
+    enableDragSort("#habitList", ".habit-drag-handle", ".habit-card[data-habit-id]", "habitOrder", "habitId");
+    enableDragSort("#taskList", ".task-drag-handle", ".habit-card[data-task-id]", "taskOrder", "taskId");
 
     render();
   </script>
