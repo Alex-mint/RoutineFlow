@@ -112,6 +112,15 @@
     .icon-btn:hover { background: rgba(255,255,255,.06); transform: translateY(-1px); }
     .icon-btn:active { transform: translateY(0); }
 
+    [hidden] { display: none !important; }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
     .hero {
       display: grid;
       grid-template-columns: 1.3fr .7fr;
@@ -616,6 +625,267 @@
 
     .file-input { display: none; }
 
+    .dropzone {
+      border: 1px dashed rgba(139,124,255,.42);
+      border-radius: 18px;
+      padding: 22px 16px;
+      background: rgba(139,124,255,.06);
+      text-align: center;
+      transition: .2s ease;
+    }
+
+    .dropzone.dragover {
+      border-color: var(--accent);
+      background: rgba(139,124,255,.18);
+      transform: translateY(-1px);
+    }
+
+    .dropzone-icon { font-size: 30px; }
+
+    .dropzone-title {
+      margin: 8px 0 4px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .dropzone-hint { margin: 0; color: var(--muted); font-size: 12px; }
+
+    .dropzone-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .dropzone-actions .primary-btn,
+    .dropzone-actions .secondary-btn { flex: 0 1 auto; padding: 0 22px; }
+
+    .ghost-btn {
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+    }
+
+    .ghost-btn:hover { color: var(--text); background: rgba(255,255,255,.08); }
+
+    .plan-error {
+      margin: 12px 0 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,107,122,.28);
+      background: rgba(255,107,122,.12);
+      color: #ffc3ca;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .plan-restore {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(82,215,164,.26);
+      border-radius: 14px;
+      background: rgba(82,215,164,.08);
+    }
+
+    .plan-restore-title { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
+
+    .plan-restore-hint {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .plan-restore .secondary-btn { flex: 0 0 auto; padding: 0 18px; }
+
+    .view-toggle {
+      display: inline-flex;
+      gap: 2px;
+      padding: 3px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .view-toggle-btn {
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: var(--muted);
+      padding: 6px 11px;
+      font-size: 12px;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: .18s ease;
+    }
+
+    .view-toggle-btn:hover { color: var(--text); }
+
+    .view-toggle-btn[aria-pressed="true"] {
+      color: var(--text);
+      background: rgba(139,124,255,.24);
+    }
+
+    .md {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #e6eaf3;
+      overflow-wrap: anywhere;
+    }
+
+    .md > *:first-child { margin-top: 0; }
+    .md > *:last-child { margin-bottom: 0; }
+
+    .md h1, .md h2, .md h3, .md h4, .md h5, .md h6 {
+      margin: 26px 0 10px;
+      line-height: 1.25;
+      letter-spacing: -.02em;
+    }
+
+    .md h1 { font-size: 25px; }
+    .md h2 { font-size: 20px; }
+    .md h3 { font-size: 17px; }
+    .md h4 { font-size: 15px; }
+    .md h5, .md h6 { font-size: 14px; color: var(--muted); }
+
+    .md h1, .md h2 {
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .md p { margin: 12px 0; }
+
+    .md ul, .md ol {
+      display: grid;
+      gap: 6px;
+      margin: 12px 0;
+      padding-left: 22px;
+    }
+
+    .md li { margin: 0; }
+    .md li > ul, .md li > ol { margin: 6px 0; }
+
+    .md-task {
+      list-style: none;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+    }
+
+    .md-task input {
+      flex: 0 0 auto;
+      width: 16px;
+      height: 16px;
+      margin-top: 4px;
+      accent-color: var(--accent-2);
+    }
+
+    .md-task-body { min-width: 0; flex: 1; }
+    .md-task-body > ul, .md-task-body > ol { margin: 6px 0; }
+    .md-task input:checked + .md-task-body { color: var(--muted-2); }
+
+    .md a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .md strong { color: #ffffff; }
+    .md del { color: var(--muted-2); }
+
+    .md hr {
+      border: 0;
+      border-top: 1px solid var(--border);
+      margin: 22px 0;
+    }
+
+    .md blockquote {
+      margin: 14px 0;
+      padding: 2px 0 2px 14px;
+      border-left: 3px solid var(--accent);
+      color: var(--muted);
+    }
+
+    .md code, .md-source {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .md code {
+      font-size: .88em;
+      padding: 2px 6px;
+      border-radius: 7px;
+      background: rgba(255,255,255,.07);
+    }
+
+    .md pre.md-code {
+      position: relative;
+      margin: 14px 0;
+      padding: 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(0,0,0,.35);
+      overflow-x: auto;
+    }
+
+    .md pre.md-code code {
+      padding: 0;
+      background: none;
+      font-size: 12.5px;
+      line-height: 1.6;
+    }
+
+    .md pre.md-code[data-lang]::before {
+      content: attr(data-lang);
+      display: block;
+      margin-bottom: 8px;
+      color: var(--muted-2);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .md img {
+      max-width: 100%;
+      border-radius: 12px;
+    }
+
+    .md-table-wrap { overflow-x: auto; }
+
+    .md-table {
+      width: 100%;
+      margin: 14px 0;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .md-table th, .md-table td {
+      border: 1px solid var(--border);
+      padding: 9px 11px;
+      text-align: left;
+    }
+
+    .md-table th { background: rgba(255,255,255,.05); font-weight: 700; }
+
+    .md-source {
+      margin: 0;
+      padding: 14px;
+      max-height: 62vh;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(0,0,0,.35);
+      color: #dfe4ef;
+      font-size: 12.5px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow: auto;
+    }
+
     .modal {
       position: fixed;
       inset: 0;
@@ -770,7 +1040,7 @@
 </head>
 
 <body>
-  <main class="app">
+  <main class="app" id="homeView">
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark">✓</div>
@@ -779,7 +1049,10 @@
           <p>Маленькие действия → большие изменения</p>
         </div>
       </div>
-      <button class="icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">⚙</button>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="planBtn" aria-label="План на месяц" title="План на месяц">📄</button>
+        <button class="icon-btn" id="settingsBtn" aria-label="Настройки" title="Настройки">⚙</button>
+      </div>
     </header>
 
     <section class="hero">
@@ -873,6 +1146,63 @@
         <button class="secondary-btn" id="importBtn">↑ Импорт JSON</button>
       </div>
       <input class="file-input" id="importFile" type="file" accept=".json,application/json" />
+    </section>
+  </main>
+
+  <main class="app" id="planView" hidden>
+    <header class="topbar">
+      <div class="brand">
+        <button class="icon-btn" id="planBackBtn" aria-label="Назад к трекеру" title="Назад к трекеру">←</button>
+        <div>
+          <h1>План на месяц</h1>
+          <p>Локальный файл в формате Markdown</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="planSettingsBtn" aria-label="Настройки" title="Настройки">⚙</button>
+      </div>
+    </header>
+
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">Файл плана</h2>
+        <div class="section-meta" id="planFileMeta">Файл не выбран</div>
+      </div>
+      <div class="dropzone" id="planDropZone">
+        <div class="dropzone-icon" aria-hidden="true">📄</div>
+        <p class="dropzone-title">Перетащите .md файл сюда</p>
+        <p class="dropzone-hint">или выберите его на этом устройстве</p>
+        <div class="dropzone-actions">
+          <button class="primary-btn" id="planChooseBtn" type="button">📂 Выбрать файл</button>
+          <button class="secondary-btn ghost-btn" id="planClearBtn" type="button" hidden>Очистить</button>
+        </div>
+        <input class="file-input" id="planFile" type="file" accept=".md,.markdown,text/markdown,text/x-markdown,text/plain" />
+      </div>
+      <p class="plan-error" id="planError" role="alert" hidden></p>
+      <div class="plan-restore" id="planRestore" hidden>
+        <div>
+          <p class="plan-restore-title">Последний файл: <strong id="planRestoreName">—</strong> <span id="planRestoreMeta"></span></p>
+          <p class="plan-restore-hint">Браузер не хранит содержимое файлов — выберите его снова, чтобы открыть план.</p>
+        </div>
+        <button class="secondary-btn" id="planRestoreBtn" type="button">Выбрать снова</button>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title" id="planDocTitle">Содержимое</h2>
+        <div class="view-toggle" id="planViewToggle" role="group" aria-label="Режим просмотра" hidden>
+          <button class="view-toggle-btn" id="planViewPreviewBtn" type="button" aria-pressed="true">Оформленный вид</button>
+          <button class="view-toggle-btn" id="planViewSourceBtn" type="button" aria-pressed="false">Исходный код</button>
+        </div>
+      </div>
+      <div class="empty" id="planEmpty">
+        <div class="empty-icon" aria-hidden="true">🗓️</div>
+        <h3>Файл плана не выбран</h3>
+        <p>Выберите локальный .md файл с ежемесячным планом — его содержимое появится здесь в оформленном виде. Файл не отправляется ни на какой сервер.</p>
+      </div>
+      <article class="md" id="planContent" aria-live="polite" hidden></article>
+      <pre class="md-source" id="planSource" hidden></pre>
     </section>
   </main>
 
@@ -1760,6 +2090,524 @@
       toastTimer = setTimeout(() => toast.classList.remove("show"), 2200);
     }
 
+    /* ---------- Markdown rendering ---------- */
+
+    const MD_TOKEN = "\u0000";
+    const MD_FENCE = /^ {0,3}(`{3,}|~{3,})\s*(\S*)\s*$/;
+    const MD_RULE = /^ {0,3}(?:(?:-[ \t]*){3,}|(?:\*[ \t]*){3,}|(?:_[ \t]*){3,})$/;
+    const MD_HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?[ \t]*$/;
+    const MD_QUOTE = /^ {0,3}>[ ]?/;
+    const MD_LIST_ITEM = /^(\s*)([-*+]|\d{1,9}[.)])[ \t]+(.*)$/;
+    const MD_TASK_ITEM = /^\[([ xX])\][ \t]+/;
+    const MD_TABLE_CELL = /^:?-+:?$/;
+    const MD_SAFE_SCHEME = /^(?:https?|mailto):/i;
+
+    const MD_ESCAPES = {
+      "\\": "&#92;", "`": "&#96;", "*": "&#42;", "_": "&#95;", "~": "&#126;",
+      "[": "&#91;", "]": "&#93;", "<": "&lt;", ">": "&gt;", "#": "&#35;",
+      "|": "&#124;", "!": "&#33;", "(": "&#40;", ")": "&#41;", "-": "&#45;", "+": "&#43;"
+    };
+
+    function renderMarkdown(source) {
+      const text = String(source == null ? "" : source)
+        .replace(/\r\n?/g, "\n")
+        .replace(new RegExp(MD_TOKEN, "g"), "")
+        .replace(/\t/g, "    ");
+      return parseMarkdownBlocks(text.split("\n")).join("\n");
+    }
+
+    function parseMarkdownBlocks(lines, tight = false) {
+      const html = [];
+      let index = 0;
+
+      while (index < lines.length) {
+        const line = lines[index];
+
+        if (!line.trim()) {
+          index++;
+          continue;
+        }
+
+        const fence = line.match(MD_FENCE);
+        if (fence) {
+          index = collectFence(lines, index, fence, html);
+          continue;
+        }
+
+        if (MD_RULE.test(line)) {
+          html.push("<hr>");
+          index++;
+          continue;
+        }
+
+        const heading = line.match(MD_HEADING);
+        if (heading) {
+          const level = heading[1].length;
+          const content = (heading[2] || "").replace(/[ \t]+#+[ \t]*$/, "");
+          html.push(`<h${level}>${renderInline(content)}</h${level}>`);
+          index++;
+          continue;
+        }
+
+        if (MD_QUOTE.test(line)) {
+          const quoted = collectQuote(lines, index);
+          html.push(`<blockquote>${quoted.html}</blockquote>`);
+          index = quoted.next;
+          continue;
+        }
+
+        if (line.includes("|") && isTableDivider(lines[index + 1])) {
+          index = collectTable(lines, index, html);
+          continue;
+        }
+
+        if (MD_LIST_ITEM.test(line)) {
+          index = collectList(lines, index, html);
+          continue;
+        }
+
+        const paragraph = [];
+        while (index < lines.length && lines[index].trim() && !startsMarkdownBlock(lines[index])) {
+          paragraph.push(lines[index].replace(/^ {1,3}/, ""));
+          index++;
+        }
+        if (paragraph.length) {
+          const text = renderInline(paragraph.join("\n"));
+          html.push(tight ? text : `<p>${text}</p>`);
+        }
+      }
+
+      return html;
+    }
+
+    function startsMarkdownBlock(line) {
+      return MD_FENCE.test(line)
+        || MD_RULE.test(line)
+        || MD_HEADING.test(line)
+        || MD_QUOTE.test(line)
+        || MD_LIST_ITEM.test(line)
+        || (line.includes("|") && isTableDivider(line));
+    }
+
+    function collectFence(lines, start, fence, html) {
+      const marker = fence[1][0];
+      const size = fence[1].length;
+      const language = fence[2] || "";
+      const body = [];
+      let index = start + 1;
+
+      while (index < lines.length) {
+        const closing = lines[index].match(MD_FENCE);
+        if (closing && closing[1][0] === marker && closing[1].length >= size && !closing[2]) {
+          index++;
+          break;
+        }
+        body.push(lines[index]);
+        index++;
+      }
+
+      const label = language ? ` data-lang="${escapeHtml(language)}"` : "";
+      html.push(`<pre class="md-code"${label}><code>${escapeHtml(body.join("\n"))}</code></pre>`);
+      return index;
+    }
+
+    function collectQuote(lines, start) {
+      const quoted = [];
+      let index = start;
+
+      while (index < lines.length) {
+        const line = lines[index];
+        if (MD_QUOTE.test(line)) {
+          quoted.push(line.replace(MD_QUOTE, ""));
+          index++;
+        } else if (line.trim() && quoted.length) {
+          quoted.push(line.trim());
+          index++;
+        } else {
+          break;
+        }
+      }
+
+      return { html: parseMarkdownBlocks(quoted).join("\n"), next: index };
+    }
+
+    function isTableDivider(line) {
+      if (typeof line !== "string") return false;
+      const cells = splitTableRow(line);
+      return cells.length > 0 && cells.every(cell => MD_TABLE_CELL.test(cell));
+    }
+
+    function splitTableRow(row) {
+      let text = String(row).trim();
+      if (text.startsWith("|")) text = text.slice(1);
+      if (text.endsWith("|") && !text.endsWith("\\|")) text = text.slice(0, -1);
+
+      const cells = [];
+      let current = "";
+      for (let i = 0; i < text.length; i++) {
+        const character = text[i];
+        if (character === "\\" && text[i + 1] === "|") {
+          current += "|";
+          i++;
+          continue;
+        }
+        if (character === "|") {
+          cells.push(current);
+          current = "";
+          continue;
+        }
+        current += character;
+      }
+      cells.push(current);
+      return cells.map(cell => cell.trim());
+    }
+
+    function collectTable(lines, start, html) {
+      const header = splitTableRow(lines[start]);
+      const align = splitTableRow(lines[start + 1]).map(cell => {
+        const left = cell.startsWith(":");
+        const right = cell.endsWith(":");
+        if (left && right) return "center";
+        return right ? "right" : "left";
+      });
+      const alignAttr = position => (align[position] && align[position] !== "left"
+        ? ` style="text-align:${align[position]}"`
+        : "");
+
+      const rows = [];
+      let index = start + 2;
+      while (index < lines.length && lines[index].trim() && lines[index].includes("|")) {
+        rows.push(splitTableRow(lines[index]));
+        index++;
+      }
+
+      const head = header
+        .map((cell, position) => `<th${alignAttr(position)}>${renderInline(cell)}</th>`)
+        .join("");
+      const body = rows
+        .map(row => `<tr>${header
+          .map((_, position) => `<td${alignAttr(position)}>${renderInline(row[position] || "")}</td>`)
+          .join("")}</tr>`)
+        .join("");
+
+      html.push(`<div class="md-table-wrap"><table class="md-table"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`);
+      return index;
+    }
+
+    function collectList(lines, start, html) {
+      const baseIndent = lines[start].match(MD_LIST_ITEM)[1].length;
+      const raw = [];
+      let index = start;
+      let pendingBlank = 0;
+
+      while (index < lines.length) {
+        const line = lines[index];
+
+        if (!line.trim()) {
+          pendingBlank++;
+          index++;
+          continue;
+        }
+
+        const marker = line.match(MD_LIST_ITEM);
+        const indent = line.length - line.trimStart().length;
+        const continues = indent > baseIndent || Boolean(marker && indent === baseIndent);
+        if (!continues) break;
+
+        while (pendingBlank) {
+          raw.push("");
+          pendingBlank--;
+        }
+        raw.push(line);
+        index++;
+      }
+
+      html.push(renderListItems(raw, baseIndent));
+      return index;
+    }
+
+    function renderListItems(rawLines, baseIndent) {
+      const items = [];
+      let current = null;
+
+      for (const line of rawLines) {
+        const marker = line.match(MD_LIST_ITEM);
+        const indent = line.length - line.trimStart().length;
+
+        if (marker && indent === baseIndent) {
+          current = { marker: marker[2], lines: [marker[3]] };
+          items.push(current);
+          continue;
+        }
+
+        if (!current) {
+          current = { marker: "", lines: [line] };
+          items.push(current);
+          continue;
+        }
+
+        current.lines.push(line);
+      }
+
+      const tag = items.some(item => /^\d/.test(item.marker)) ? "ol" : "ul";
+      const className = items.some(item => MD_TASK_ITEM.test(item.lines[0] || "")) ? ' class="md-task-list"' : "";
+      const loose = rawLines.some(line => !line.trim());
+      const body = items.map(item => renderListItem(item, baseIndent, !loose)).join("");
+      return `<${tag}${className}>${body}</${tag}>`;
+    }
+
+    function renderListItem(item, baseIndent, tight) {
+      const dedent = baseIndent + item.marker.length + 1;
+      const lines = [item.lines[0] || ""];
+      for (const line of item.lines.slice(1)) {
+        lines.push(line.replace(new RegExp(`^ {0,${dedent}}`), ""));
+      }
+
+      const task = lines[0].match(MD_TASK_ITEM);
+      const content = task
+        ? [lines[0].slice(task[0].length), ...lines.slice(1)]
+        : lines;
+      const inner = parseMarkdownBlocks(content, tight).join("\n");
+
+      if (!task) return `<li>${inner}</li>`;
+      const checked = task[1].toLowerCase() === "x" ? " checked" : "";
+      return `<li class="md-task"><input type="checkbox" disabled${checked}><div class="md-task-body">${inner}</div></li>`;
+    }
+
+    function renderInline(source) {
+      const codes = [];
+      const text = escapeHtml(String(source == null ? "" : source))
+        .replace(/\\([\\`*_{}\[\]()#+\-.!>~|<>])/g, (match, character) => MD_ESCAPES[character] || character);
+      return restoreInline(codes, renderInlineTail(text, codes));
+    }
+
+    function renderInlineTail(source, codes) {
+      let text = String(source == null ? "" : source);
+
+      text = text.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (match, ticks, code) =>
+        storeInline(codes, `<code>${code.trim()}</code>`));
+
+      text = text.replace(/!\[([^\[\]]*)\]\([ \t]*([^\s)]+)[^)]*\)/g, (match, alt, url) => {
+        const src = sanitizeUrl(url);
+        return src ? `<img src="${src}" alt="${alt}" loading="lazy">` : match;
+      });
+
+      text = text.replace(/\[([^\[\]]+)\]\([ \t]*([^\s)]+)[^)]*\)/g, (match, label, url) => {
+        const href = sanitizeUrl(url);
+        if (!href) return match;
+        return `<a href="${href}" target="_blank" rel="noopener noreferrer">${renderInlineTail(label, codes)}</a>`;
+      });
+
+      text = applyEmphasis(text);
+      return text.replace(/ {2,}\n/g, "<br>\n");
+    }
+
+    function applyEmphasis(text) {
+      return text
+        .replace(/\*\*\*([^\s*](?:[\s\S]*?[^\s*])?)\*\*\*/g, "<strong><em>$1</em></strong>")
+        .replace(/\*\*([^\s*](?:[\s\S]*?[^\s*])?)\*\*/g, "<strong>$1</strong>")
+        .replace(/__([^\s_](?:[\s\S]*?[^\s_])?)__/g, "<strong>$1</strong>")
+        .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, "$1<em>$2</em>")
+        .replace(/(^|[^_\w])_([^_\n]+)_(?!_)/g, "$1<em>$2</em>")
+        .replace(/~~([^\s~](?:[\s\S]*?[^\s~])?)~~/g, "<del>$1</del>");
+    }
+
+    function storeInline(store, html) {
+      store.push(html);
+      return `${MD_TOKEN}${store.length - 1}${MD_TOKEN}`;
+    }
+
+    function restoreInline(store, html) {
+      return html.replace(new RegExp(`${MD_TOKEN}(\\d+)${MD_TOKEN}`, "g"),
+        (match, position) => store[Number(position)] || "");
+    }
+
+    function sanitizeUrl(value) {
+      const url = String(value).trim().replace(/[\u0000-\u0020]/g, "");
+      if (!url || url.startsWith("//")) return "";
+      if (MD_SAFE_SCHEME.test(url)) return url;
+      if (/^[a-z][a-z0-9+.-]*:/i.test(url)) return "";
+      return url;
+    }
+
+    /* ---------- Monthly plan page ---------- */
+
+    const HOME_ROUTE = "#/";
+    const PLAN_ROUTE = "#/plan";
+    const MD_EXTENSION = /\.(?:md|markdown)$/i;
+    const PLAN_SELECTION_KEY = "habitFlow.planFile.v1";
+
+    let planSourceText = "";
+    let planFileName = "";
+    let planFileSize = 0;
+    let planFileModified = 0;
+    let planViewMode = "preview";
+    let planSelection = null;
+
+    /* Persisted file selection: localStorage keeps only the identifier, never the file contents. */
+
+    function normalizePlanSelection(value) {
+      if (!value || typeof value !== "object") return null;
+      const rawName = typeof value.name === "string" ? value.name.trim() : "";
+      if (!rawName || !MD_EXTENSION.test(rawName)) return null;
+      return {
+        name: rawName.slice(0, 180),
+        size: Number.isFinite(value.size) && value.size >= 0 ? value.size : 0,
+        lastModified: Number.isFinite(value.lastModified) && value.lastModified > 0 ? value.lastModified : 0,
+        savedAt: Number.isFinite(value.savedAt) && value.savedAt > 0 ? value.savedAt : 0
+      };
+    }
+
+    function savePlanSelection(file) {
+      planSelection = normalizePlanSelection({
+        name: file.name,
+        size: file.size,
+        lastModified: file.lastModified,
+        savedAt: Date.now()
+      });
+      if (!planSelection) return false;
+      try {
+        localStorage.setItem(PLAN_SELECTION_KEY, JSON.stringify(planSelection));
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function loadPlanSelection() {
+      let parsed = null;
+      try {
+        const raw = localStorage.getItem(PLAN_SELECTION_KEY);
+        if (raw) parsed = JSON.parse(raw);
+      } catch {
+        parsed = null;
+      }
+      planSelection = normalizePlanSelection(parsed);
+      return planSelection;
+    }
+
+    function forgetPlanSelection() {
+      planSelection = null;
+      try {
+        localStorage.removeItem(PLAN_SELECTION_KEY);
+      } catch {
+        return;
+      }
+    }
+
+    function isSamePlanFile(file) {
+      if (!planSelection) return false;
+      return planSelection.name === file.name
+        && (!planSelection.size || planSelection.size === file.size)
+        && (!planSelection.lastModified || planSelection.lastModified === file.lastModified);
+    }
+
+    function planSelectionLabel() {
+      const parts = [];
+      if (planSelection.size) parts.push(formatFileSize(planSelection.size));
+      if (planSelection.savedAt) parts.push(`выбран ${formatDateShort(new Date(planSelection.savedAt))}`);
+      return parts.length ? `· ${parts.join(" · ")}` : "";
+    }
+
+    function renderPlanSelection() {
+      const showBanner = Boolean(planSelection) && !planFileName;
+      $("#planRestore").hidden = !showBanner;
+      if (!showBanner) return;
+      $("#planRestoreName").textContent = planSelection.name;
+      $("#planRestoreMeta").textContent = planSelectionLabel();
+    }
+
+    function activeRoute() {
+      return location.hash.replace(/^#/, "").startsWith("/plan") ? PLAN_ROUTE : HOME_ROUTE;
+    }
+
+    function applyRoute() {
+      const onPlanPage = activeRoute() === PLAN_ROUTE;
+      $("#homeView").hidden = onPlanPage;
+      $("#planView").hidden = !onPlanPage;
+      document.title = onPlanPage ? "План на месяц — Habit Flow" : "Habit Flow — трекер привычек";
+      window.scrollTo(0, 0);
+    }
+
+    function navigate(route) {
+      if (location.hash === route) applyRoute();
+      else location.hash = route;
+    }
+
+    function showPlanError(message) {
+      const box = $("#planError");
+      box.textContent = message;
+      box.hidden = !message;
+    }
+
+    function formatFileSize(bytes) {
+      if (!Number.isFinite(bytes) || bytes <= 0) return "0 КБ";
+      if (bytes < 1024) return `${bytes} Б`;
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1).replace(".", ",")} КБ`;
+      return `${(bytes / (1024 * 1024)).toFixed(1).replace(".", ",")} МБ`;
+    }
+
+    function loadPlanFile(file) {
+      if (!file) return;
+      if (!MD_EXTENSION.test(file.name || "")) {
+        showPlanError("Нужен файл в формате .md — выбранный файл не подходит");
+        return;
+      }
+      showPlanError("");
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const restored = isSamePlanFile(file);
+        planFileName = file.name;
+        planFileSize = file.size;
+        planFileModified = file.lastModified;
+        planSourceText = String(reader.result || "");
+        savePlanSelection(file);
+        renderPlanDocument();
+        showToast(restored ? "Файл восстановлен" : "Файл загружен");
+      };
+      reader.onerror = () => showPlanError("Не удалось прочитать файл");
+      reader.readAsText(file, "utf-8");
+    }
+
+    function renderPlanDocument() {
+      const hasContent = Boolean(planSourceText.trim());
+
+      $("#planFileMeta").textContent = planFileName
+        ? `${planFileName} · ${formatFileSize(planFileSize)} · ${formatDateShort(new Date(planFileModified))}`
+        : "Файл не выбран";
+      $("#planDocTitle").textContent = planFileName || "Содержимое";
+
+      $("#planEmpty").hidden = hasContent;
+      $("#planViewToggle").hidden = !hasContent;
+      $("#planClearBtn").hidden = !planFileName;
+      $("#planContent").innerHTML = hasContent ? renderMarkdown(planSourceText) : "";
+      $("#planSource").textContent = planSourceText;
+
+      renderPlanSelection();
+      showPlanError(planFileName && !hasContent ? "Файл пуст — нечего отображать" : "");
+      setPlanView(planViewMode);
+    }
+
+    function setPlanView(mode) {
+      planViewMode = mode === "source" ? "source" : "preview";
+      const preview = planViewMode === "preview";
+      $("#planContent").hidden = !preview;
+      $("#planSource").hidden = preview;
+      $("#planViewPreviewBtn").setAttribute("aria-pressed", String(preview));
+      $("#planViewSourceBtn").setAttribute("aria-pressed", String(!preview));
+    }
+
+    function clearPlan() {
+      planSourceText = "";
+      planFileName = "";
+      planFileSize = 0;
+      planFileModified = 0;
+      $("#planFile").value = "";
+      forgetPlanSelection();
+      renderPlanDocument();
+    }
+
     /* ---------- Drag & drop sorting ---------- */
 
     function enableDragSort(listSelector, handleSelector, cardSelector, orderKey, idKey) {
@@ -1891,10 +2739,49 @@
     });
 
     $("#settingsBtn").addEventListener("click", openSettings);
+    $("#planSettingsBtn").addEventListener("click", openSettings);
     $("#closeSettingsBtn").addEventListener("click", closeSettings);
     $("#settingsModal").addEventListener("click", event => {
       if (event.target === $("#settingsModal")) closeSettings();
     });
+
+    $("#planBtn").addEventListener("click", () => navigate(PLAN_ROUTE));
+    $("#planBackBtn").addEventListener("click", () => navigate(HOME_ROUTE));
+    $("#planChooseBtn").addEventListener("click", () => $("#planFile").click());
+    $("#planClearBtn").addEventListener("click", clearPlan);
+    $("#planFile").addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) loadPlanFile(file);
+      event.target.value = "";
+    });
+    $("#planViewPreviewBtn").addEventListener("click", () => setPlanView("preview"));
+    $("#planViewSourceBtn").addEventListener("click", () => setPlanView("source"));
+    $("#planRestoreBtn").addEventListener("click", () => $("#planFile").click());
+
+    const dropZone = $("#planDropZone");
+
+    dropZone.addEventListener("dragenter", event => {
+      event.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragover", event => {
+      event.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", event => {
+      if (event.relatedTarget && dropZone.contains(event.relatedTarget)) return;
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", event => {
+      event.preventDefault();
+      dropZone.classList.remove("dragover");
+      loadPlanFile(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
+    });
+
+    window.addEventListener("hashchange", applyRoute);
 
     $("#exportBtn").addEventListener("click", exportData);
     $("#importBtn").addEventListener("click", () => $("#importFile").click());
@@ -1942,12 +2829,17 @@
 
     window.addEventListener("storage", () => {
       Object.assign(state, loadState());
+      loadPlanSelection();
+      renderPlanDocument();
       render();
     });
 
     enableDragSort("#habitList", ".habit-drag-handle", ".habit-card[data-habit-id]", "habitOrder", "habitId");
     enableDragSort("#taskList", ".task-drag-handle", ".habit-card[data-task-id]", "taskOrder", "taskId");
 
+    loadPlanSelection();
+    renderPlanDocument();
+    applyRoute();
     render();
   </script>
 </body>
