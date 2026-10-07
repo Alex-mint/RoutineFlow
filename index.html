@@ -364,8 +364,39 @@
       background: linear-gradient(180deg, rgba(255,139,106,.10), rgba(255,255,255,.02)), var(--card);
     }
 
+    .task-card.priority {
+      border-left-color: var(--danger);
+      background: linear-gradient(180deg, rgba(255,107,122,.10), rgba(255,255,255,.02)), var(--card);
+    }
+
     .task-card.done {
       border-left-color: var(--success);
+    }
+
+    .priority-flag-btn {
+      width: 34px;
+      height: 32px;
+      flex: 0 0 auto;
+      padding: 0;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted-2);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: .18s ease;
+    }
+
+    .priority-flag-btn:hover {
+      color: var(--danger);
+      background: rgba(255,107,122,.12);
+      border-color: rgba(255,107,122,.28);
+    }
+
+    .priority-flag-btn.active {
+      color: var(--danger);
+      background: rgba(255,107,122,.18);
     }
 
     .habit-top {
@@ -525,6 +556,157 @@
 
     .mini-btn:hover { color: var(--text); background: rgba(255,255,255,.05); }
     .mini-btn.danger:hover { color: var(--danger); }
+
+    .subtasks {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+    }
+
+    .subtasks-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 6px;
+    }
+
+    .subtasks-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+
+    .subtasks-count {
+      font-size: 12px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .subtask-progress {
+      height: 6px;
+      margin-bottom: 8px;
+    }
+
+    .subtask-list {
+      display: grid;
+      gap: 4px;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .subtask-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid transparent;
+      transition: .15s ease;
+    }
+
+    .subtask-item:hover {
+      border-color: var(--border);
+      background: rgba(255,255,255,.05);
+    }
+
+    .subtask-item.done .subtask-name {
+      color: var(--muted-2);
+      text-decoration: line-through;
+    }
+
+    .subtask-check {
+      width: 28px;
+      height: 28px;
+      flex: 0 0 auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: rgba(255,255,255,.03);
+      color: transparent;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      padding: 0;
+      transition: .15s ease;
+    }
+
+    .subtask-check span {
+      width: 14px;
+      height: 14px;
+      border: 1.5px solid var(--muted-2);
+      border-radius: 5px;
+      display: grid;
+      place-items: center;
+      font-size: 9px;
+      font-weight: 900;
+      transition: .15s ease;
+    }
+
+    .subtask-item.done .subtask-check {
+      background: rgba(82,215,164,.12);
+      border-color: rgba(82,215,164,.28);
+    }
+
+    .subtask-item.done .subtask-check span {
+      border-color: var(--success);
+      background: var(--success);
+      color: #08130f;
+    }
+
+    .subtask-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+      cursor: text;
+    }
+
+    .subtask-delete {
+      flex: 0 0 auto;
+      border: 0;
+      background: transparent;
+      color: var(--muted-2);
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1;
+      transition: .15s ease;
+    }
+
+    .subtask-delete:hover {
+      color: var(--text);
+      background: rgba(255,255,255,.07);
+    }
+
+    .subtask-delete:hover {
+      color: var(--danger);
+    }
+
+    .subtask-add {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .subtask-input {
+      flex: 1;
+      min-width: 0;
+      height: 32px;
+    }
+
+    .subtask-add-btn {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 32px;
+      padding: 0;
+      border-radius: 10px;
+    }
 
     .calendar-wrap {
       padding-bottom: 2px;
@@ -959,6 +1141,14 @@
       cursor: pointer;
     }
 
+    #priorityToggle {
+      accent-color: #5eb8ff;
+    }
+
+    #priorityToggle:checked {
+      accent-color: var(--danger);
+    }
+
     .checkbox-label {
       color: var(--text);
       font-size: 13px;
@@ -1228,12 +1418,19 @@
         <input class="text-input" id="taskDate" type="date" />
       </div>
 
-      <div class="field" id="longTaskField" hidden>
-        <div class="checkbox-row">
-          <input class="checkbox-input" id="longTaskToggle" type="checkbox" />
-          <label class="checkbox-label" for="longTaskToggle">Долгая задача</label>
-        </div>
-      </div>
+       <div class="field" id="longTaskField" hidden>
+         <div class="checkbox-row">
+           <input class="checkbox-input" id="longTaskToggle" type="checkbox" />
+           <label class="checkbox-label" for="longTaskToggle">Долгая задача</label>
+         </div>
+       </div>
+
+       <div class="field" id="priorityField" hidden>
+         <div class="checkbox-row">
+           <input class="checkbox-input" id="priorityToggle" type="checkbox" />
+           <label class="checkbox-label" for="priorityToggle">Приоритетная задача</label>
+         </div>
+       </div>
 
       <div class="field">
         <label id="colorLabel">Цвет</label>
@@ -1325,7 +1522,8 @@
           name: habit.name.trim().slice(0, 80) || "Без названия",
           description: normalizeDescription(habit.description),
           color: COLORS.includes(habit.color) ? habit.color : COLORS[0],
-          completedDates: normalizeDates(habit.completedDates)
+          completedDates: normalizeDates(habit.completedDates),
+          subtasks: normalizeSubtasks(habit.subtasks)
         }));
     }
 
@@ -1340,8 +1538,22 @@
           longTask: Boolean(task.longTask),
           createdAt: isValidDateKey(task.createdAt) ? task.createdAt : task.date,
           color: COLORS.includes(task.color) ? task.color : COLORS[0],
-          date: task.date,
-          completed: Boolean(task.completed)
+           date: task.date,
+          completed: Boolean(task.completed),
+          priority: Boolean(task.priority),
+          subtasks: normalizeSubtasks(task.subtasks)
+        }));
+    }
+
+    function normalizeSubtasks(rawSubtasks) {
+      if (!Array.isArray(rawSubtasks)) return [];
+      const takenIds = new Set();
+      return rawSubtasks
+        .filter(subtask => subtask && typeof subtask.name === "string")
+        .map(subtask => ({
+          id: claimId(subtask.id, takenIds),
+          name: subtask.name.trim().slice(0, 120) || "Без названия",
+          done: Boolean(subtask.done)
         }));
     }
 
@@ -1360,6 +1572,7 @@
 
     function compareTasks(today) {
       return (a, b) => Number(b.date === today) - Number(a.date === today)
+        || Number(b.priority) - Number(a.priority)
         || Number(a.completed) - Number(b.completed)
         || a.name.localeCompare(b.name, "ru");
     }
@@ -1655,6 +1868,59 @@
       return `<div class="streak">${status} · <strong>${age}</strong> ${pluralize(age, DAY_FORMS)}</div>`;
     }
 
+    function taskMeta(task) {
+      const chips = taskStatusChip(task);
+      const stats = subtaskStats(task);
+      if (stats) {
+        const subChip = `<div class="streak subtask-chip">▦ <strong>${stats.done}</strong>/${stats.total} · <strong>${stats.percent}</strong>%</div>`;
+        return metaRow(chips + subChip, taskSubtitle(task));
+      }
+      return metaRow(chips, taskSubtitle(task));
+    }
+
+    function habitMeta(habit) {
+      const streakChip = `<div class="streak">🔥 <strong>${calculateStreak(habit)}</strong> ${pluralize(calculateStreak(habit), STREAK_FORMS)}</div>`;
+      const stats = subtaskStats(habit);
+      if (stats) {
+        const subChip = `<div class="streak subtask-chip">▦ <strong>${stats.done}</strong>/${stats.total} · <strong>${stats.percent}</strong>%</div>`;
+        return metaRow(streakChip + subChip, habit.completedDates.includes(localDateKey()) ? "Сегодня выполнено" : "Сегодня ещё не выполнено");
+      }
+      return metaRow(streakChip, habit.completedDates.includes(localDateKey()) ? "Сегодня выполнено" : "Сегодня ещё не выполнено");
+    }
+
+    function subtasksSection(ownerType, ownerId, item) {
+      const stats = subtaskStats(item);
+      const total = stats ? stats.total : 0;
+      const done = stats ? stats.done : 0;
+      const percent = stats ? stats.percent : 0;
+      return `
+        <div class="subtasks">
+          <div class="subtasks-header">
+            <div class="subtasks-title">Подзадачи</div>
+            <div class="subtasks-count"><strong>${done}</strong> из <strong>${total}</strong> · <strong>${percent}</strong>%</div>
+          </div>
+          <div class="progress-track subtask-progress">
+            <div class="progress-fill" style="width:${percent}%"></div>
+          </div>
+          <ul class="subtask-list">
+            ${(Array.isArray(item.subtasks) ? item.subtasks : []).map(sub => `
+              <li class="subtask-item${sub.done ? " done" : ""}" data-subtask-id="${sub.id}">
+                <button class="subtask-check" data-action="toggle-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" data-subtask-id="${sub.id}" type="button" aria-pressed="${sub.done}" aria-label="${sub.done ? "Снять отметку" : "Отметить"}">
+                  <span>${sub.done ? "✓" : ""}</span>
+                </button>
+                <span class="subtask-name" data-subtask-id="${sub.id}" data-id="${ownerId}">${escapeHtml(sub.name)}</span>
+                <button class="subtask-delete" data-action="delete-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" data-subtask-id="${sub.id}" type="button" title="Удалить">×</button>
+              </li>
+            `).join("")}
+          </ul>
+          <div class="subtask-add">
+            <input class="text-input subtask-input" type="text" placeholder="Новая подзадача..." maxlength="120" data-id="${ownerId}" data-owner-type="${ownerType}" />
+            <button class="primary-btn subtask-add-btn" data-action="add-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" type="button">＋</button>
+          </div>
+        </div>
+      `;
+    }
+
     function renderTasks({ visibleTasks }) {
       const container = $("#taskList");
       $("#taskSectionTitle").textContent = showingFutureTasks ? "Будущие задачи" : "Задачи на сегодня";
@@ -1681,31 +1947,45 @@
       container.appendChild(fragment);
     }
 
+    function taskPriorityFlag(id, active) {
+      const className = `priority-flag-btn${active ? " active" : ""}`;
+      return `<button class="${className}" type="button" data-action="toggle-priority" data-id="${id}"
+        aria-pressed="${active}"
+        aria-label="${active ? "Снять приоритет" : "Отметить приоритетом"}">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+          <path fill="currentColor"
+            d="M6 5h1.5v14H6V5zm2 0h11l3 5-3 5H8V5z" />
+        </svg>
+      </button>`;
+    }
+
     function createTaskCard(task) {
       const id = escapeHtml(task.id);
       const expanded = expandedIds.has(expandKey("task", task.id));
       const card = document.createElement("article");
-      card.className = `habit-card task-card${task.longTask ? " long-task" : ""}${task.completed ? " done" : ""}${expanded ? " expanded" : ""}`;
+      card.className = `habit-card task-card${task.longTask ? " long-task" : ""}${task.priority ? " priority" : ""}${task.completed ? " done" : ""}${expanded ? " expanded" : ""}`;
       card.dataset.taskId = task.id;
       card.innerHTML = `
         <div class="habit-top">
           ${dragHandle("task", task.name)}
           ${checkButton(id, task.completed, "toggle-task")}
+          ${taskPriorityFlag(id, task.priority)}
           <div class="habit-main">
             <h3 class="habit-name" style="color:${task.color}">${escapeHtml(task.name)}</h3>
           </div>
           ${expandButton(expanded, id)}
         </div>
         ${detailsPanel(`
-          ${metaRow(taskStatusChip(task), taskSubtitle(task))}
-          ${descriptionBlock(task.description)}
-          <div class="mini-actions">
-            <button class="mini-btn" data-action="edit-task" data-id="${id}">Изменить</button>
-            <button class="mini-btn danger" data-action="delete-task" data-id="${id}">Удалить</button>
-          </div>`)}
-      `;
-      return card;
-    }
+           ${taskMeta(task)}
+           ${subtasksSection("task", task.id, task)}
+           ${descriptionBlock(task.description)}
+           <div class="mini-actions">
+             <button class="mini-btn" data-action="edit-task" data-id="${id}">Изменить</button>
+             <button class="mini-btn danger" data-action="delete-task" data-id="${id}">Удалить</button>
+           </div>`)}
+       `;
+       return card;
+     }
 
     function renderHabits() {
       const container = $("#habitList");
@@ -1745,8 +2025,8 @@
           ${expandButton(expanded, id)}
         </div>
         ${detailsPanel(`
-          ${metaRow(`<div class="streak">🔥 <strong>${streak}</strong> ${pluralize(streak, STREAK_FORMS)}</div>`,
-            done ? "Сегодня выполнено" : "Сегодня ещё не выполнено")}
+          ${habitMeta(habit)}
+          ${subtasksSection("habit", habit.id, habit)}
           ${descriptionBlock(habit.description)}
           <div class="mini-actions">
             <button class="mini-btn" data-action="activity" data-id="${id}">Активность</button>
@@ -1858,6 +2138,15 @@
       showToast(task.completed ? "Задача выполнена ✓" : "Отметка снята");
     }
 
+    function toggleTaskPriority(id) {
+      const task = state.tasks.find(item => item.id === id);
+      if (!task) return;
+      task.priority = !task.priority;
+      saveState();
+      render();
+      showToast(task.priority ? "Приоритетная задача" : "Приоритет снят");
+    }
+
     function deleteTask(id) {
       const task = state.tasks.find(item => item.id === id);
       if (!task) return;
@@ -1867,6 +2156,54 @@
       saveState();
       render();
       showToast("Задача удалена");
+    }
+
+    function subtaskStats(item) {
+      if (!Array.isArray(item.subtasks) || !item.subtasks.length) return null;
+      const total = item.subtasks.length;
+      const done = item.subtasks.filter(sub => sub.done).length;
+      return { total, done, percent: total ? Math.round((done / total) * 100) : 0 };
+    }
+
+    function toggleSubtask(ownerType, ownerId, subtaskId) {
+      const owner = ownerType === "habit"
+        ? state.habits.find(item => item.id === ownerId)
+        : state.tasks.find(item => item.id === ownerId);
+      if (!owner) return;
+      const subtask = (Array.isArray(owner.subtasks) && owner.subtasks.find(sub => sub.id === subtaskId)) || null;
+      if (!subtask) return;
+      subtask.done = !subtask.done;
+      saveState();
+      render();
+    }
+
+    function addSubtask(ownerType, ownerId, name) {
+      const owner = ownerType === "habit"
+        ? state.habits.find(item => item.id === ownerId)
+        : state.tasks.find(item => item.id === ownerId);
+      if (!owner) return false;
+      if (!name.trim()) return false;
+      if (!Array.isArray(owner.subtasks)) owner.subtasks = [];
+      if (owner.subtasks.length >= 50) {
+        showToast("Достигнут лимит подзадач");
+        return false;
+      }
+      owner.subtasks.push({ id: createId(), name: name.trim().slice(0, 120) || "Без названия", done: false });
+      saveState();
+      render();
+      showToast("Подзадача добавлена");
+      return true;
+    }
+
+    function deleteSubtask(ownerType, ownerId, subtaskId) {
+      const owner = ownerType === "habit"
+        ? state.habits.find(item => item.id === ownerId)
+        : state.tasks.find(item => item.id === ownerId);
+      if (!owner || !Array.isArray(owner.subtasks)) return;
+      owner.subtasks = owner.subtasks.filter(sub => sub.id !== subtaskId);
+      saveState();
+      render();
+      showToast("Подзадача удалена");
     }
 
     function deleteHabit(id) {
@@ -1888,6 +2225,16 @@
     }
 
     /* ---------- Modal ---------- */
+
+    function updatePriorityCheckboxColor() {
+      const checkbox = $("#priorityToggle");
+      if (!checkbox) return;
+      if (checkbox.checked) {
+        checkbox.style.accentColor = "var(--danger)";
+      } else {
+        checkbox.style.accentColor = "#5eb8ff";
+      }
+    }
 
     function openModal(type, id = null) {
       const isTask = type === "task";
@@ -1915,6 +2262,9 @@
       $("#taskDate").value = isTask ? (item ? item.date : localDateKey()) : "";
       $("#longTaskField").hidden = !isTask;
       $("#longTaskToggle").checked = isTask && Boolean(item && item.longTask);
+      $("#priorityField").hidden = !isTask;
+      $("#priorityToggle").checked = Boolean(isTask && item && item.priority);
+      updatePriorityCheckboxColor();
 
       selectedColor = (item && item.color) || COLORS[0];
       renderColorPicker();
@@ -1983,13 +2333,14 @@
         return false;
       }
 
-      const patch = {
-        name: name.slice(0, 80),
-        description: description.slice(0, 180),
-        date,
-        longTask: $("#longTaskToggle").checked,
-        color: selectedColor
-      };
+       const patch = {
+         name: name.slice(0, 80),
+         description: description.slice(0, 180),
+         date,
+         longTask: $("#longTaskToggle").checked,
+         priority: $("#priorityToggle").checked,
+         color: selectedColor
+       };
 
       const existing = state.tasks.find(item => item.id === editingTaskId);
       if (existing) {
@@ -2704,13 +3055,40 @@
         edit: id => openModal("habit", id),
         delete: deleteHabit,
         activity: showHabitActivity,
-        "toggle-details": (id, button) => toggleDetails(button)
+        "toggle-details": (id, button) => toggleDetails(button),
+        "toggle-subtask": (ownerId, button) => toggleSubtask("habit", ownerId, button.dataset.subtaskId),
+        "delete-subtask": (ownerId, button) => deleteSubtask("habit", ownerId, button.dataset.subtaskId),
+        "add-subtask": ownerId => {
+          const input = document.querySelector(`.subtask-input[data-id="${ownerId}"][data-owner-type="habit"]`);
+          if (input) {
+            const name = input.value.trim();
+            if (!name) { input.focus(); return; }
+            if (addSubtask("habit", ownerId, name)) setTimeout(() => {
+              const next = document.querySelector(`.subtask-input[data-id="${ownerId}"][data-owner-type="habit"]`);
+              if (next) { next.focus(); next.select(); }
+            }, 0);
+          }
+        }
       },
       task: {
         "toggle-task": toggleTask,
+        "toggle-priority": toggleTaskPriority,
         "edit-task": id => openModal("task", id),
         "delete-task": deleteTask,
-        "toggle-details": (id, button) => toggleDetails(button)
+        "toggle-details": (id, button) => toggleDetails(button),
+        "toggle-subtask": (taskId, button) => toggleSubtask("task", taskId, button.dataset.subtaskId),
+        "delete-subtask": (taskId, button) => deleteSubtask("task", taskId, button.dataset.subtaskId),
+        "add-subtask": taskId => {
+          const input = document.querySelector(`.subtask-input[data-id="${taskId}"][data-owner-type="task"]`);
+          if (input) {
+            const name = input.value.trim();
+            if (!name) { input.focus(); return; }
+            if (addSubtask("task", taskId, name)) setTimeout(() => {
+              const next = document.querySelector(`.subtask-input[data-id="${taskId}"][data-owner-type="task"]`);
+              if (next) { next.focus(); next.select(); }
+            }, 0);
+          }
+        }
       }
     };
 
@@ -2731,12 +3109,13 @@
       render();
     });
 
-    $("#closeModalBtn").addEventListener("click", closeModal);
-    $("#cancelModalBtn").addEventListener("click", closeModal);
-    $("#saveHabitBtn").addEventListener("click", saveFromModal);
-    $("#habitModal").addEventListener("click", event => {
-      if (event.target === $("#habitModal")) closeModal();
-    });
+     $("#closeModalBtn").addEventListener("click", closeModal);
+     $("#cancelModalBtn").addEventListener("click", closeModal);
+     $("#saveHabitBtn").addEventListener("click", saveFromModal);
+     $("#priorityToggle").addEventListener("change", updatePriorityCheckboxColor);
+     $("#habitModal").addEventListener("click", event => {
+       if (event.target === $("#habitModal")) closeModal();
+     });
 
     $("#settingsBtn").addEventListener("click", openSettings);
     $("#planSettingsBtn").addEventListener("click", openSettings);
@@ -2818,6 +3197,36 @@
       if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
         saveFromModal();
+      }
+    });
+
+    $("#taskList").addEventListener("keydown", event => {
+      if (event.target.classList.contains("subtask-input") && event.key === "Enter") {
+        event.preventDefault();
+        const ownerType = event.target.dataset.ownerType || "task";
+        const taskId = event.target.dataset.id;
+        const name = event.target.value.trim();
+        if (taskId && name) {
+          if (addSubtask(ownerType, taskId, name)) setTimeout(() => {
+            const next = document.querySelector(`.subtask-input[data-id="${taskId}"][data-owner-type="${ownerType}"]`);
+            if (next) { next.focus(); next.select(); }
+          }, 0);
+        }
+      }
+    });
+
+    $("#habitList").addEventListener("keydown", event => {
+      if (event.target.classList.contains("subtask-input") && event.key === "Enter") {
+        event.preventDefault();
+        const ownerType = event.target.dataset.ownerType || "habit";
+        const habitId = event.target.dataset.id;
+        const name = event.target.value.trim();
+        if (habitId && name) {
+          if (addSubtask(ownerType, habitId, name)) setTimeout(() => {
+            const next = document.querySelector(`.subtask-input[data-id="${habitId}"][data-owner-type="${ownerType}"]`);
+            if (next) { next.focus(); next.select(); }
+          }, 0);
+        }
       }
     });
 
