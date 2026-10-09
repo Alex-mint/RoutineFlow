@@ -783,11 +783,21 @@
       border-color: rgba(255,255,255,.1);
     }
 
-    .day-box.level-0 { background: rgba(255,255,255,.045); }
-    .day-box.level-1 { background: rgba(82,215,164,.20); border-color: rgba(82,215,164,.10); }
-    .day-box.level-2 { background: rgba(82,215,164,.38); border-color: rgba(82,215,164,.16); }
-    .day-box.level-3 { background: rgba(82,215,164,.57); border-color: rgba(82,215,164,.22); }
-    .day-box.level-4 { background: rgba(82,215,164,.78); border-color: rgba(82,215,164,.30); }
+    .day-box.level-0,
+    .legend-box.level-0 { background: rgba(255,255,255,.045); }
+
+    .day-box.level-1,
+    .legend-box.level-1 { background: rgba(82,215,164,.20); border-color: rgba(82,215,164,.10); }
+
+    .day-box.level-2,
+    .legend-box.level-2 { background: rgba(82,215,164,.38); border-color: rgba(82,215,164,.16); }
+
+    .day-box.level-3,
+    .legend-box.level-3 { background: rgba(82,215,164,.57); border-color: rgba(82,215,164,.22); }
+
+    .day-box.level-4,
+    .legend-box.level-4 { background: rgba(82,215,164,.78); border-color: rgba(82,215,164,.30); }
+
     .day-box.today { outline: 1px solid rgba(139,124,255,.9); outline-offset: 2px; }
     .day-box.future { opacity: .20; }
 
@@ -1366,7 +1376,7 @@
     </section>
   </main>
 
-  <main class="app" id="planView" hidden>
+  <div class="app" id="planView" hidden>
     <header class="topbar">
       <div class="brand">
         <button class="icon-btn" id="planBackBtn" aria-label="Назад к трекеру" title="Назад к трекеру">←</button>
@@ -1421,7 +1431,7 @@
       <article class="md" id="planContent" aria-live="polite" hidden></article>
       <pre class="md-source" id="planSource" hidden></pre>
     </section>
-  </main>
+  </div>
 
   <div class="modal" id="habitModal" aria-hidden="true">
     <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -1550,7 +1560,7 @@
           description: normalizeDescription(habit.description),
           color: COLORS.includes(habit.color) ? habit.color : COLORS[0],
           completedDates: normalizeDates(habit.completedDates),
-          subtasks: normalizeSubtasks(habit.subtasks)
+          subtasks: normalizeSubtasks(habit.subtasks, true)
         }));
     }
 
@@ -1568,20 +1578,34 @@
            date: task.date,
           completed: Boolean(task.completed),
           priority: Boolean(task.priority),
-          subtasks: normalizeSubtasks(task.subtasks)
+          subtasks: normalizeSubtasks(task.subtasks, false)
         }));
     }
 
-    function normalizeSubtasks(rawSubtasks) {
+    // Subtasks behave differently depending on the owner:
+    //  - habit subtasks ("мини-привычки") are date-tracked, exactly like the parent habit:
+    //    marking them done only affects today; a new day starts fresh.
+    //  - task subtasks are one-shot checkboxes bound to the parent task lifetime.
+    // Old data may still use `done: true` on habit subtasks; migrate that into
+    // today's date so nothing is lost during the upgrade, and persist right away.
+    function normalizeSubtasks(rawSubtasks, isHabit = false) {
       if (!Array.isArray(rawSubtasks)) return [];
       const takenIds = new Set();
       return rawSubtasks
         .filter(subtask => subtask && typeof subtask.name === "string")
-        .map(subtask => ({
-          id: claimId(subtask.id, takenIds),
-          name: subtask.name.trim().slice(0, 120) || "Без названия",
-          done: Boolean(subtask.done)
-        }));
+        .map(subtask => {
+          const base = {
+            id: claimId(subtask.id, takenIds),
+            name: subtask.name.trim().slice(0, 120) || "Без названия"
+          };
+          if (isHabit) {
+            const dates = Array.isArray(subtask.completedDates)
+              ? normalizeDates(subtask.completedDates)
+              : (subtask.done ? [localDateKey()] : []);
+            return { ...base, completedDates: dates };
+          }
+          return { ...base, done: Boolean(subtask.done) };
+        });
     }
 
     function normalizeOrder(rawOrder, items, compare) {
@@ -1690,6 +1714,14 @@
 
     function isDoneToday(habit) {
       return habit.completedDates.includes(localDateKey());
+    }
+
+    function isSubtaskDone(subtask, ownerType) {
+      if (ownerType === "habit") {
+        return Array.isArray(subtask.completedDates)
+          && subtask.completedDates.includes(localDateKey());
+      }
+      return Boolean(subtask.done);
     }
 
     function createView() {
@@ -1897,7 +1929,7 @@
 
     function taskMeta(task) {
       const chips = taskStatusChip(task);
-      const stats = subtaskStats(task);
+      const stats = subtaskStats(task, "task");
       if (stats) {
         const subChip = `<div class="streak subtask-chip">▦ <strong>${stats.done}</strong>/${stats.total} · <strong>${stats.percent}</strong>%</div>`;
         return metaRow(chips + subChip, taskSubtitle(task));
@@ -1907,39 +1939,45 @@
 
     function habitMeta(habit) {
       const streakChip = `<div class="streak">🔥 <strong>${calculateStreak(habit)}</strong> ${pluralize(calculateStreak(habit), STREAK_FORMS)}</div>`;
-      const stats = subtaskStats(habit);
+      const stats = subtaskStats(habit, "habit");
+      const today = localDateKey();
+      const subtitle = habit.completedDates.includes(today) ? "Сегодня выполнено" : "Сегодня ещё не выполнено";
       if (stats) {
         const subChip = `<div class="streak subtask-chip">▦ <strong>${stats.done}</strong>/${stats.total} · <strong>${stats.percent}</strong>%</div>`;
-        return metaRow(streakChip + subChip, habit.completedDates.includes(localDateKey()) ? "Сегодня выполнено" : "Сегодня ещё не выполнено");
+        return metaRow(streakChip + subChip, subtitle);
       }
-      return metaRow(streakChip, habit.completedDates.includes(localDateKey()) ? "Сегодня выполнено" : "Сегодня ещё не выполнено");
+      return metaRow(streakChip, subtitle);
     }
 
     function subtasksSection(ownerType, ownerId, item) {
-      const stats = subtaskStats(item);
+      const stats = subtaskStats(item, ownerType);
       const total = stats ? stats.total : 0;
       const done = stats ? stats.done : 0;
       const percent = stats ? stats.percent : 0;
+      const isHabit = ownerType === "habit";
+      const title = isHabit ? "Мини-привычки" : "подзадачи";
+      const items = (Array.isArray(item.subtasks) ? item.subtasks : []).map(sub => {
+        const doneToday = isSubtaskDone(sub, ownerType);
+        return `
+          <li class="subtask-item${doneToday ? " done" : ""}" data-subtask-id="${sub.id}">
+            <button class="subtask-check" data-action="toggle-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" data-subtask-id="${sub.id}" type="button" aria-pressed="${doneToday}" aria-label="${doneToday ? "Снять отметку" : "Отметить"}">
+              <span>${doneToday ? "✓" : ""}</span>
+            </button>
+            <span class="subtask-name" data-subtask-id="${sub.id}" data-id="${ownerId}">${escapeHtml(sub.name)}</span>
+            <button class="subtask-delete" data-action="delete-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" data-subtask-id="${sub.id}" type="button" title="Удалить">×</button>
+          </li>
+        `;
+      }).join("");
       return `
         <div class="subtasks">
           <div class="subtasks-header">
-            <div class="subtasks-title">Подзадачи</div>
+            <div class="subtasks-title">${title}</div>
             <div class="subtasks-count"><strong>${done}</strong> из <strong>${total}</strong> · <strong>${percent}</strong>%</div>
           </div>
           <div class="progress-track subtask-progress">
             <div class="progress-fill" style="width:${percent}%"></div>
           </div>
-          <ul class="subtask-list">
-            ${(Array.isArray(item.subtasks) ? item.subtasks : []).map(sub => `
-              <li class="subtask-item${sub.done ? " done" : ""}" data-subtask-id="${sub.id}">
-                <button class="subtask-check" data-action="toggle-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" data-subtask-id="${sub.id}" type="button" aria-pressed="${sub.done}" aria-label="${sub.done ? "Снять отметку" : "Отметить"}">
-                  <span>${sub.done ? "✓" : ""}</span>
-                </button>
-                <span class="subtask-name" data-subtask-id="${sub.id}" data-id="${ownerId}">${escapeHtml(sub.name)}</span>
-                <button class="subtask-delete" data-action="delete-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" data-subtask-id="${sub.id}" type="button" title="Удалить">×</button>
-              </li>
-            `).join("")}
-          </ul>
+          <ul class="subtask-list">${items}</ul>
           <div class="subtask-add">
             <input class="text-input subtask-input" type="text" placeholder="Новая подзадача..." maxlength="120" data-id="${ownerId}" data-owner-type="${ownerType}" />
             <button class="primary-btn subtask-add-btn" data-action="add-subtask" data-owner-type="${ownerType}" data-id="${ownerId}" type="button">＋</button>
@@ -2042,7 +2080,6 @@
     function createHabitCard(habit) {
       const id = escapeHtml(habit.id);
       const done = habit.completedDates.includes(localDateKey());
-      const streak = calculateStreak(habit);
       const expanded = expandedIds.has(expandKey("habit", habit.id));
       const card = document.createElement("article");
       card.className = `habit-card${done ? " done" : ""}${expanded ? " expanded" : ""}`;
@@ -2134,13 +2171,22 @@
       const element = document.activeElement;
       const list = element && element.closest ? element.closest(".habit-list") : null;
       if (!list || !element.dataset || !element.dataset.action) return null;
-      return { list, action: element.dataset.action, id: element.dataset.id };
+      return {
+        list,
+        action: element.dataset.action,
+        id: element.dataset.id,
+        subtaskId: element.dataset.subtaskId
+      };
     }
 
     function restoreFocusTarget(target) {
       if (!target || !target.list.isConnected) return;
       const button = [...target.list.querySelectorAll("button[data-action]")]
-        .find(item => item.dataset.action === target.action && item.dataset.id === target.id);
+        .find(item =>
+          item.dataset.action === target.action
+          && item.dataset.id === target.id
+          && item.dataset.subtaskId === target.subtaskId
+        );
       if (button) button.focus();
     }
 
@@ -2196,10 +2242,10 @@
       showToast("Задача удалена");
     }
 
-    function subtaskStats(item) {
+    function subtaskStats(item, ownerType) {
       if (!Array.isArray(item.subtasks) || !item.subtasks.length) return null;
       const total = item.subtasks.length;
-      const done = item.subtasks.filter(sub => sub.done).length;
+      const done = item.subtasks.filter(sub => isSubtaskDone(sub, ownerType)).length;
       return { total, done, percent: total ? Math.round((done / total) * 100) : 0 };
     }
 
@@ -2210,7 +2256,22 @@
       if (!owner) return;
       const subtask = (Array.isArray(owner.subtasks) && owner.subtasks.find(sub => sub.id === subtaskId)) || null;
       if (!subtask) return;
-      subtask.done = !subtask.done;
+
+      if (ownerType === "habit") {
+        // Трекерная логика: отметка живёт только в рамках сегодняшнего дня.
+        if (!Array.isArray(subtask.completedDates)) subtask.completedDates = [];
+        const today = localDateKey();
+        const index = subtask.completedDates.indexOf(today);
+        if (index >= 0) {
+          subtask.completedDates.splice(index, 1);
+        } else {
+          subtask.completedDates.push(today);
+          subtask.completedDates.sort();
+        }
+      } else {
+        subtask.done = !subtask.done;
+      }
+
       saveState();
       render();
     }
@@ -2226,7 +2287,10 @@
         showToast("Достигнут лимит подзадач");
         return false;
       }
-      owner.subtasks.push({ id: createId(), name: name.trim().slice(0, 120) || "Без названия", done: false });
+      const subtask = { id: createId(), name: name.trim().slice(0, 120) || "Без названия" };
+      if (ownerType === "habit") subtask.completedDates = [];
+      else subtask.done = false;
+      owner.subtasks.push(subtask);
       saveState();
       render();
       showToast("Подзадача добавлена");
@@ -2264,16 +2328,6 @@
 
     /* ---------- Modal ---------- */
 
-    function updatePriorityCheckboxColor() {
-      const checkbox = $("#priorityToggle");
-      if (!checkbox) return;
-      if (checkbox.checked) {
-        checkbox.style.accentColor = "var(--danger)";
-      } else {
-        checkbox.style.accentColor = "#5eb8ff";
-      }
-    }
-
     function openModal(type, id = null) {
       const isTask = type === "task";
       modalType = type;
@@ -2302,7 +2356,6 @@
       $("#longTaskToggle").checked = isTask && Boolean(item && item.longTask);
       $("#priorityField").hidden = !isTask;
       $("#priorityToggle").checked = Boolean(isTask && item && item.priority);
-      updatePriorityCheckboxColor();
 
       selectedColor = (item && item.color) || COLORS[0];
       renderColorPicker();
@@ -2493,7 +2546,7 @@
 
     const MD_ESCAPES = {
       "\\": "&#92;", "`": "&#96;", "*": "&#42;", "_": "&#95;", "~": "&#126;",
-      "[": "&#91;", "]": "&#93;", "<": "&lt;", ">": "&gt;", "#": "&#35;",
+      "[": "&#91;", "]": "&#93;", "#": "&#35;",
       "|": "&#124;", "!": "&#33;", "(": "&#40;", ")": "&#41;", "-": "&#45;", "+": "&#43;"
     };
 
@@ -2766,7 +2819,8 @@
     function renderInline(source) {
       const codes = [];
       const text = escapeHtml(String(source == null ? "" : source))
-        .replace(/\\([\\`*_{}\[\]()#+\-.!>~|<>])/g, (match, character) => MD_ESCAPES[character] || character);
+        .replace(/\\(&(?:lt|gt|amp|quot|#39);)/g, "$1")
+        .replace(/\\([\\`*_{}\[\]()#+\-.!~|])/g, (match, character) => MD_ESCAPES[character] || character);
       return restoreInline(codes, renderInlineTail(text, codes));
     }
 
@@ -3005,10 +3059,19 @@
       let dragPointerId = null;
 
       function persistOrder() {
-        const order = [...list.querySelectorAll(cardSelector)].map(card => card.dataset[idKey]);
-        const current = state[orderKey];
-        if (order.every((id, index) => id === current[index])) return;
-        state[orderKey] = [...order, ...current.filter(id => !order.includes(id))];
+        const visibleIds = [...list.querySelectorAll(cardSelector)].map(card => card.dataset[idKey]);
+        const current = [...state[orderKey]];
+        const visibleSet = new Set(visibleIds);
+        const visibleIterator = visibleIds[Symbol.iterator]();
+        const next = current.map(id => {
+          if (!visibleSet.has(id)) return id;
+          const step = visibleIterator.next();
+          return step.done ? id : step.value;
+        });
+        for (const leftover of visibleIterator) next.push(leftover);
+
+        if (next.length === current.length && next.every((id, index) => id === current[index])) return;
+        state[orderKey] = next;
         saveState();
       }
 
@@ -3150,7 +3213,6 @@
      $("#closeModalBtn").addEventListener("click", closeModal);
      $("#cancelModalBtn").addEventListener("click", closeModal);
      $("#saveHabitBtn").addEventListener("click", saveFromModal);
-     $("#priorityToggle").addEventListener("change", updatePriorityCheckboxColor);
      $("#habitModal").addEventListener("click", event => {
        if (event.target === $("#habitModal")) closeModal();
      });
@@ -3288,6 +3350,10 @@
     renderPlanDocument();
     applyRoute();
     render();
+
+    // Persist immediately after load so any one-time migrations
+    // (e.g. legacy habit subtask `done: true` → completedDates) are written back once.
+    saveState();
   </script>
 </body>
 </html>
