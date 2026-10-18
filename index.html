@@ -425,6 +425,13 @@
       overflow-wrap: anywhere;
     }
 
+    .task-card .habit-desc a {
+      color: var(--accent);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      overflow-wrap: anywhere;
+    }
+
     .habit-sub {
       margin: 0;
       color: var(--muted);
@@ -460,6 +467,8 @@
     }
 
     .expand-btn:hover { color: var(--text); background: rgba(255,255,255,.07); }
+    .expand-btn.has-unfinished-subtasks,
+    .expand-btn.has-unfinished-subtasks:hover { color: var(--danger); }
     .expand-btn svg { display: block; transition: transform .28s ease; }
     .habit-card.expanded .expand-btn svg { transform: rotate(180deg); }
 
@@ -1877,8 +1886,51 @@
         : `<p class="habit-desc habit-details-empty">Без описания</p>`;
     }
 
-    function expandButton(expanded, id) {
-      return `<button class="expand-btn" type="button" data-action="toggle-details" data-id="${id}"
+    function taskDescriptionBlock(text) {
+      if (!text) return `<p class="habit-desc habit-details-empty">Без описания</p>`;
+
+      const urlPattern = /https?:\/\/[^\s<>"']+|www\.[^\s<>"']+/gi;
+      let html = "";
+      let lastIndex = 0;
+
+      for (const match of text.matchAll(urlPattern)) {
+        const originalUrl = match[0];
+        let urlLength = originalUrl.length;
+        while (urlLength && /[.,!?;:)\]}]/.test(originalUrl[urlLength - 1])) {
+          const character = originalUrl[urlLength - 1];
+          if ((character === ")" && (originalUrl.slice(0, urlLength).match(/\(/g) || []).length >= (originalUrl.slice(0, urlLength).match(/\)/g) || []).length)
+            || (character === "]" && (originalUrl.slice(0, urlLength).match(/\[/g) || []).length >= (originalUrl.slice(0, urlLength).match(/\]/g) || []).length)
+            || (character === "}" && (originalUrl.slice(0, urlLength).match(/\{/g) || []).length >= (originalUrl.slice(0, urlLength).match(/\}/g) || []).length)) {
+            break;
+          }
+          urlLength--;
+        }
+
+        const urlText = originalUrl.slice(0, urlLength);
+        html += escapeHtml(text.slice(lastIndex, match.index));
+        if (urlText) {
+          const href = urlText.startsWith("www.") ? `https://${urlText}` : urlText;
+          try {
+            const url = new URL(href);
+            if (url.protocol === "http:" || url.protocol === "https:") {
+              html += `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(urlText)}</a>`;
+            } else {
+              html += escapeHtml(urlText);
+            }
+          } catch {
+            html += escapeHtml(urlText);
+          }
+        }
+        html += escapeHtml(originalUrl.slice(urlLength));
+        lastIndex = match.index + originalUrl.length;
+      }
+
+      html += escapeHtml(text.slice(lastIndex));
+      return `<p class="habit-desc">${html}</p>`;
+    }
+
+    function expandButton(expanded, id, hasUnfinishedSubtasks = false) {
+      return `<button class="expand-btn${hasUnfinishedSubtasks ? " has-unfinished-subtasks" : ""}" type="button" data-action="toggle-details" data-id="${id}"
         aria-expanded="${expanded}"
         aria-label="${expanded ? "Скрыть подробности" : "Показать подробности"}"
         title="${expanded ? "Скрыть подробности" : "Показать подробности"}">
@@ -2027,6 +2079,8 @@
     function createTaskCard(task) {
       const id = escapeHtml(task.id);
       const expanded = expandedIds.has(expandKey("task", task.id));
+      const hasUnfinishedSubtasks = Array.isArray(task.subtasks)
+        && task.subtasks.some(subtask => !isSubtaskDone(subtask, "task"));
       const card = document.createElement("article");
       card.className = `habit-card task-card${task.longTask ? " long-task" : ""}${task.priority ? " priority" : ""}${task.completed ? " done" : ""}${expanded ? " expanded" : ""}`;
       card.style.setProperty("--task-color", task.color);
@@ -2039,12 +2093,12 @@
           <div class="habit-main">
             <h3 class="habit-name" style="color:${task.color}">${escapeHtml(task.name)}</h3>
           </div>
-          ${expandButton(expanded, id)}
+          ${expandButton(expanded, id, hasUnfinishedSubtasks)}
         </div>
         ${detailsPanel(`
            ${taskMeta(task)}
            ${subtasksSection("task", task.id, task)}
-           ${descriptionBlock(task.description)}
+           ${taskDescriptionBlock(task.description)}
            <div class="mini-actions">
              <button class="mini-btn" data-action="edit-task" data-id="${id}" type="button" aria-label="Изменить задачу" title="Изменить задачу">
                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
