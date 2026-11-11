@@ -791,6 +791,10 @@
     }
 
     .day-box {
+      display: block;
+      padding: 0;
+      color: inherit;
+      cursor: pointer;
       background: rgba(255,255,255,.045);
       border: 1px solid rgba(255,255,255,.04);
       position: relative;
@@ -809,6 +813,55 @@
     .day-box.level-4 { background: rgba(82,215,164,.78); border-color: rgba(82,215,164,.30); }
     .day-box.today { outline: 1px solid rgba(139,124,255,.9); outline-offset: 2px; }
     .day-box.future { opacity: .20; }
+
+    .date-habit-list {
+      display: grid;
+      gap: 8px;
+      max-height: min(52vh, 420px);
+      overflow: auto;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .date-habit-item {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-height: 48px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: rgba(255,255,255,.025);
+      cursor: pointer;
+    }
+
+    .date-habit-item input {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      accent-color: var(--success);
+      flex: 0 0 auto;
+    }
+
+    .date-habit-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex: 0 0 auto;
+    }
+
+    .date-habit-name {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+
+    .date-habit-count {
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 12px;
+    }
 
     .calendar-legend {
       margin-top: 10px;
@@ -1363,7 +1416,7 @@
         <div class="weekday-row" aria-hidden="true">
           <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
         </div>
-        <div class="calendar" id="calendar" role="img" aria-label="Активность за последние 30 дней"></div>
+        <div class="calendar" id="calendar" role="group" aria-label="Активность за последние 30 дней"></div>
         <div class="calendar-legend" aria-hidden="true">
           <span>меньше</span>
           <span class="legend-box level-0"></span>
@@ -1511,6 +1564,24 @@
     </div>
   </div>
 
+  <div class="modal" id="activityDateModal" aria-hidden="true">
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="activityDateTitle" tabindex="-1">
+      <div class="modal-header">
+        <h2 class="modal-title" id="activityDateTitle">Привычки за день</h2>
+        <button class="icon-btn modal-close" id="closeActivityDateBtn" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <p class="date-habit-count" id="activityDateCount"></p>
+      <ul class="date-habit-list" id="activityDateHabitList"></ul>
+      <div class="empty" id="activityDateEmpty" hidden>
+        <p>Пока нет привычек для отметки.</p>
+      </div>
+      <div class="modal-actions">
+        <button class="secondary-btn" id="cancelActivityDateBtn" type="button">Отмена</button>
+        <button class="primary-btn" id="saveActivityDateBtn" type="button">Сохранить</button>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -1531,6 +1602,8 @@
     let modalType = "habit";
     let selectedColor = COLORS[0];
     let selectedActivityHabitId = null;
+    let editingActivityDate = null;
+    let activityDateDraft = new Set();
     let showingFutureTasks = false;
     let toastTimer = null;
     let storageWarned = false;
@@ -2220,8 +2293,13 @@
         const total = selectedHabit ? 1 : state.habits.length;
         const level = total ? Math.ceil((done / total) * 4) : 0;
 
-        const box = document.createElement("div");
+        const box = document.createElement("button");
+        box.type = "button";
         box.className = `day-box level-${level}${key === todayKey ? " today" : ""}${date > today ? " future" : ""}`;
+        box.dataset.date = key;
+        box.setAttribute("aria-label", selectedHabit
+          ? `${formatDateLong(date)} — ${done ? "выполнено" : "не выполнено"}: ${selectedHabit.name}. Редактировать отметки за день`
+          : `${formatDateLong(date)} — ${done} из ${total} привычек. Редактировать отметки за день`);
         box.title = selectedHabit
           ? `${formatDateShort(date)} — ${done ? "выполнено" : "не выполнено"}: ${selectedHabit.name}`
           : `${formatDateShort(date)} — ${done} из ${total} привычек`;
@@ -2229,6 +2307,98 @@
       }
 
       calendar.appendChild(fragment);
+    }
+
+    function openActivityDateModal(dateKey) {
+      editingActivityDate = dateKey;
+      activityDateDraft = new Set(
+        state.habits
+          .filter(habit => habit.completedDates.includes(dateKey))
+          .map(habit => habit.id)
+      );
+      $("#activityDateTitle").textContent = `Привычки — ${formatDateLong(parseDateKey(dateKey))}`;
+      renderActivityDateHabits();
+      lastFocusedElement = document.activeElement;
+      $("#activityDateModal").classList.add("open");
+      $("#activityDateModal").setAttribute("aria-hidden", "false");
+      $("#activityDateModal .modal-card").focus();
+    }
+
+    function renderActivityDateHabits() {
+      const list = $("#activityDateHabitList");
+      list.innerHTML = "";
+      $("#activityDateEmpty").hidden = state.habits.length > 0;
+      $("#saveActivityDateBtn").disabled = state.habits.length === 0;
+
+      state.habits.forEach(habit => {
+        const item = document.createElement("li");
+        const label = document.createElement("label");
+        const checkbox = document.createElement("input");
+        const color = document.createElement("span");
+        const name = document.createElement("span");
+
+        label.className = "date-habit-item";
+        checkbox.type = "checkbox";
+        checkbox.checked = activityDateDraft.has(habit.id);
+        checkbox.dataset.habitId = habit.id;
+        color.className = "date-habit-color";
+        color.style.backgroundColor = habit.color;
+        color.setAttribute("aria-hidden", "true");
+        name.className = "date-habit-name";
+        name.textContent = habit.name;
+
+        label.append(checkbox, color, name);
+        item.appendChild(label);
+        list.appendChild(item);
+      });
+      updateActivityDateCount();
+    }
+
+    function updateActivityDateCount() {
+      $("#activityDateCount").textContent = state.habits.length
+        ? `${activityDateDraft.size} из ${state.habits.length} привычек выполнено`
+        : "";
+    }
+
+    function closeActivityDateModal() {
+      $("#activityDateModal").classList.remove("open");
+      $("#activityDateModal").setAttribute("aria-hidden", "true");
+      editingActivityDate = null;
+      activityDateDraft.clear();
+      restoreFocus(lastFocusedElement);
+      lastFocusedElement = null;
+    }
+
+    function saveActivityDate() {
+      if (!editingActivityDate) return;
+      const previousStatus = new Map(
+        state.habits.map(habit => [habit.id, habit.completedDates.includes(editingActivityDate)])
+      );
+      for (const habit of state.habits) {
+        const index = habit.completedDates.indexOf(editingActivityDate);
+        if (activityDateDraft.has(habit.id) && index < 0) {
+          habit.completedDates.push(editingActivityDate);
+          habit.completedDates.sort();
+        } else if (!activityDateDraft.has(habit.id) && index >= 0) {
+          habit.completedDates.splice(index, 1);
+        }
+      }
+      if (!saveState()) {
+        for (const habit of state.habits) {
+          const wasDone = previousStatus.get(habit.id);
+          const index = habit.completedDates.indexOf(editingActivityDate);
+          if (wasDone && index < 0) {
+            habit.completedDates.push(editingActivityDate);
+            habit.completedDates.sort();
+          } else if (!wasDone && index >= 0) {
+            habit.completedDates.splice(index, 1);
+          }
+        }
+        return;
+      }
+      closeActivityDateModal();
+      render();
+      showToast("Отметки за день сохранены");
     }
 
     function captureFocusTarget() {
@@ -3369,6 +3539,26 @@
       renderCalendar();
     });
 
+    $("#calendar").addEventListener("click", event => {
+      const dayButton = event.target.closest(".day-box[data-date]");
+      if (dayButton) openActivityDateModal(dayButton.dataset.date);
+    });
+
+    $("#activityDateHabitList").addEventListener("change", event => {
+      const checkbox = event.target.closest("input[data-habit-id]");
+      if (!checkbox) return;
+      if (checkbox.checked) activityDateDraft.add(checkbox.dataset.habitId);
+      else activityDateDraft.delete(checkbox.dataset.habitId);
+      updateActivityDateCount();
+    });
+
+    $("#closeActivityDateBtn").addEventListener("click", closeActivityDateModal);
+    $("#cancelActivityDateBtn").addEventListener("click", closeActivityDateModal);
+    $("#saveActivityDateBtn").addEventListener("click", saveActivityDate);
+    $("#activityDateModal").addEventListener("click", event => {
+      if (event.target === $("#activityDateModal")) closeActivityDateModal();
+    });
+
     $("#resetBtn").addEventListener("click", () => {
       if (!confirm("Удалить все привычки и всю историю? Это действие нельзя отменить без резервной копии.")) return;
       Object.assign(state, defaultState());
@@ -3441,6 +3631,7 @@
     document.addEventListener("keydown", event => {
       if (event.key !== "Escape") return;
       if ($("#habitModal").classList.contains("open")) closeModal();
+      else if ($("#activityDateModal").classList.contains("open")) closeActivityDateModal();
       else if ($("#settingsModal").classList.contains("open")) closeSettings();
     });
 
