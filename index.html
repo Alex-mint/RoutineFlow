@@ -295,6 +295,49 @@
 
     .section-meta { color: var(--muted); font-size: 12px; }
 
+    .project-section-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .project-section-toggle {
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+    }
+
+    .project-section-toggle svg {
+      width: 16px;
+      height: 16px;
+      transition: transform .18s ease;
+    }
+
+    .project-section-toggle[aria-expanded="true"] svg { transform: rotate(90deg); }
+    .project-section-toggle:hover { background: rgba(255,255,255,.06); color: var(--text); }
+
+    .section-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .project-import-btn {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 12px;
+      white-space: nowrap;
+    }
+
     .calendar-meta {
       display: flex;
       align-items: center;
@@ -1399,10 +1442,21 @@
 
     <section class="section">
       <div class="section-header">
-        <h3 class="section-title" id="longTaskSectionTitle">Проекты</h3>
-        <div class="section-meta" id="longTaskCountLabel">0 проектов</div>
+        <div class="project-section-heading">
+          <button class="project-section-toggle" id="projectSectionToggle" type="button" aria-expanded="false" aria-controls="longTaskList" aria-label="Развернуть проекты">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+          </button>
+          <h3 class="section-title" id="longTaskSectionTitle">Проекты</h3>
+          <div class="section-meta" id="longTaskCountLabel">0 проектов</div>
+        </div>
+        <div class="section-header-actions">
+          <button class="secondary-btn project-import-btn" id="importProjectBtn" type="button">＋ Импорт .md</button>
+          <input class="file-input" id="projectFile" type="file" accept=".md,.markdown,text/markdown,text/x-markdown,text/plain" />
+        </div>
       </div>
-      <div class="habit-list" id="longTaskList"></div>
+      <div class="habit-list" id="longTaskList" hidden></div>
     </section>
 
     <section class="section">
@@ -1614,6 +1668,7 @@
     let toastTimer = null;
     let storageWarned = false;
     let lastFocusedElement = null;
+    let projectsExpanded = false;
     const expandedIds = new Set();
 
     const $ = (selector) => document.querySelector(selector);
@@ -1903,9 +1958,18 @@
       const view = createView();
       renderStats(view);
       renderTasks(view);
+      setProjectsExpanded(projectsExpanded);
       renderHabits();
       renderCalendar();
       restoreFocusTarget(focusTarget);
+    }
+
+    function setProjectsExpanded(expanded) {
+      projectsExpanded = Boolean(expanded);
+      const toggle = $("#projectSectionToggle");
+      toggle.setAttribute("aria-expanded", String(projectsExpanded));
+      toggle.setAttribute("aria-label", projectsExpanded ? "Свернуть проекты" : "Развернуть проекты");
+      $("#longTaskList").hidden = !projectsExpanded;
     }
 
     function setProgress(prefix, percent) {
@@ -2815,6 +2879,101 @@
     const MD_TABLE_CELL = /^:?-+:?$/;
     const MD_SAFE_SCHEME = /^(?:https?|mailto):/i;
 
+    function parseMarkdownChecklist(source) {
+      const subtasks = [];
+      const listStack = [];
+      let fence = null;
+
+      for (const line of String(source).split(/\r?\n/)) {
+        const fenceMatch = line.match(MD_FENCE);
+        if (fenceMatch) {
+          const marker = fenceMatch[1];
+          if (!fence) {
+            fence = { character: marker[0], length: marker.length };
+            listStack.length = 0;
+          } else if (marker[0] === fence.character && marker.length >= fence.length) {
+            fence = null;
+          }
+          continue;
+        }
+        if (fence) continue;
+
+        const itemMatch = line.match(MD_LIST_ITEM);
+        if (!itemMatch) {
+          if (line.trim() && !/^\s*$/.test(line)) listStack.length = 0;
+          continue;
+        }
+
+        const indent = itemMatch[1].replace(/\t/g, "    ").length;
+        while (listStack.length && listStack[listStack.length - 1].indent >= indent) listStack.pop();
+
+        const content = itemMatch[3];
+        const taskMatch = content.match(/^\[([ xX])\][ \t]+(.*)$/);
+        const label = taskMatch ? taskMatch[2].trim() : content.trim();
+        if (taskMatch && label) {
+          const name = `${listStack.length ? "-- " : ""}${label}`.slice(0, 120);
+          if (name) {
+            subtasks.push({
+              id: createId(),
+              name,
+              done: taskMatch[1].toLowerCase() === "x",
+              promoteToSimpleTask: false
+            });
+          }
+        }
+        listStack.push({ indent, label });
+      }
+
+      return subtasks;
+    }
+
+    function importProjectFromMarkdown(file) {
+      if (!file) return;
+      if (!MD_EXTENSION.test(file.name || "")) {
+        showToast("Выберите файл в формате .md");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const subtasks = parseMarkdownChecklist(reader.result || "");
+        if (!subtasks.length) {
+          showToast("В файле не найдено пунктов чек-листа");
+          return;
+        }
+        if (subtasks.length > 50) {
+          showToast("В проект можно импортировать не более 50 пунктов чек-листа");
+          return;
+        }
+
+        const name = file.name.replace(MD_EXTENSION, "").trim().slice(0, 80) || "Без названия";
+        const completedCount = subtasks.filter(subtask => subtask.done).length;
+        const summary = `Создать проект «${name}» с ${subtasks.length} пунктами чек-листа? Отмечено: ${completedCount}.`;
+        if (!confirm(summary)) return;
+
+        const today = localDateKey();
+        const project = {
+          id: createId(),
+          name,
+          description: "",
+          longTask: true,
+          createdAt: today,
+          color: COLORS[0],
+          date: today,
+          completed: false,
+          priority: false,
+          subtasks
+        };
+        state.tasks.push(project);
+        state.taskOrder.push(project.id);
+        saveState();
+        render();
+        showToast("Проект импортирован");
+      };
+      reader.onerror = () => showToast("Не удалось прочитать файл");
+      reader.readAsText(file, "utf-8");
+    }
+
     const MD_ESCAPES = {
       "\\": "&#92;", "`": "&#96;", "*": "&#42;", "_": "&#95;", "~": "&#126;",
       "[": "&#91;", "]": "&#93;", "<": "&lt;", ">": "&gt;", "#": "&#35;",
@@ -3505,6 +3664,13 @@
     });
 
     $("#planBtn").addEventListener("click", () => navigate(PLAN_ROUTE));
+    $("#projectSectionToggle").addEventListener("click", () => setProjectsExpanded(!projectsExpanded));
+    $("#importProjectBtn").addEventListener("click", () => $("#projectFile").click());
+    $("#projectFile").addEventListener("change", event => {
+      const file = event.target.files && event.target.files[0];
+      if (file) importProjectFromMarkdown(file);
+      event.target.value = "";
+    });
     $("#planBackBtn").addEventListener("click", () => navigate(HOME_ROUTE));
     $("#planChooseBtn").addEventListener("click", () => $("#planFile").click());
     $("#planClearBtn").addEventListener("click", clearPlan);
